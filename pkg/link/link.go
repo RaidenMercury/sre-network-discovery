@@ -1,6 +1,7 @@
 package link
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"net"
@@ -96,6 +97,41 @@ func GetEligibleAdapters() ([]AdapterInfo, error) {
 
 		results = append(results, info)
 	}
+
+	if len(results) == 0 {
+		for _, iface := range ifaces {
+			if iface.Flags&net.FlagLoopback != 0 {
+				continue
+			}
+			info := AdapterInfo{
+				Index: iface.Index,
+				Name:  iface.Name,
+				MAC:   iface.HardwareAddr.String(),
+				IsUp:  iface.Flags&net.FlagUp != 0,
+				Flags: iface.Flags.String(),
+			}
+			addrs, _ := iface.Addrs()
+			for _, addr := range addrs {
+				var ip net.IP
+				switch v := addr.(type) {
+				case *net.IPNet:
+					ip = v.IP
+				case *net.IPAddr:
+					ip = v.IP
+				}
+				if ip == nil || ip.IsLoopback() {
+					continue
+				}
+				if ip.To4() != nil {
+					info.IPv4 = append(info.IPv4, ip.String())
+				} else {
+					info.IPv6 = append(info.IPv6, ip.String())
+				}
+			}
+			results = append(results, info)
+		}
+	}
+
 	return results, nil
 }
 
@@ -104,10 +140,36 @@ func ValidateLink(adapterName string, checkSecureEndpoint string) *LinkValidatio
 		AdapterName: adapterName,
 	}
 
-	iface, err := net.InterfaceByName(adapterName)
+	if adapterName == "" {
+		eligible, _ := GetEligibleAdapters()
+		if len(eligible) > 0 {
+			adapterName = eligible[0].Name
+			res.AdapterName = adapterName
+		} else {
+			res.StatusSummary = "No se detectaron adaptadores de red en el sistema."
+			return res
+		}
+	}
+
+	allIfaces, err := net.Interfaces()
 	if err != nil {
-		res.StatusSummary = fmt.Sprintf("Adaptador '%s' no encontrado: %v", adapterName, err)
+		res.StatusSummary = fmt.Sprintf("Error consultando interfaces: %v", err)
 		return res
+	}
+
+	var iface *net.Interface
+	for i := range allIfaces {
+		if strings.EqualFold(allIfaces[i].Name, adapterName) {
+			iface = &allIfaces[i]
+			break
+		}
+	}
+	if iface == nil {
+		iface, err = net.InterfaceByName(adapterName)
+		if err != nil {
+			res.StatusSummary = fmt.Sprintf("Adaptador '%s' no encontrado", adapterName)
+			return res
+		}
 	}
 
 	res.MACAddress = iface.HardwareAddr.String()
@@ -216,7 +278,9 @@ func probeDNS() bool {
 	resolver := &net.Resolver{
 		PreferGo: true,
 	}
-	_, err := resolver.LookupHost(nil, "cloudflare.com")
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	_, err := resolver.LookupHost(ctx, "cloudflare.com")
 	return err == nil
 }
 

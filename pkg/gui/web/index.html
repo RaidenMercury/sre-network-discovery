@@ -237,6 +237,12 @@
       transition: all 0.2s;
     }
 
+    select option {
+      background: #101422;
+      color: #f1f5f9;
+      padding: 8px;
+    }
+
     select:focus, input:focus {
       border-color: var(--cyan);
       box-shadow: 0 0 12px rgba(6, 182, 212, 0.25);
@@ -749,7 +755,12 @@
   <main>
     <div class="glass-panel">
       <div class="form-group">
-        <label for="adapterSelect">Interfaz de Red Física (Ethernet)</label>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <label for="adapterSelect">Interfaz de Red Física (Ethernet / Conexiones)</label>
+          <button type="button" onclick="loadAdapters()" style="background: none; border: none; color: var(--cyan); cursor: pointer; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px;">
+            <span>🔄</span> <span>Actualizar adaptadores</span>
+          </button>
+        </div>
         <select id="adapterSelect"></select>
       </div>
 
@@ -859,6 +870,11 @@
   </div>
 
   <script>
+    // --- Global Application State (Declared at top to prevent TDZ ReferenceErrors) ---
+    let isScanning = false;
+    let timerInterval = null;
+    let currentInventory = { devices: [] };
+
     // --- Canvas Radar Scanner Effect ---
     const canvas = document.getElementById('radarCanvas');
     const ctx = canvas.getContext('2d');
@@ -927,10 +943,7 @@
     }
     drawRadar();
 
-    // --- State and Handlers ---
-    let isScanning = false;
-    let timerInterval = null;
-    let currentInventory = { devices: [] };
+    // --- Handlers & API Calls ---
 
     function showToast(msg, icon = '📋') {
       const toast = document.getElementById('toast');
@@ -962,6 +975,19 @@
         const adapters = await res.json();
         const sel = document.getElementById('adapterSelect');
         sel.innerHTML = '';
+        if (!adapters || adapters.length === 0) {
+          const opt = document.createElement('option');
+          opt.value = '';
+          opt.textContent = '⚠️ No se detectaron interfaces de red físicas';
+          sel.appendChild(opt);
+          const card = document.getElementById('validationCard');
+          const sum = document.getElementById('valSummary');
+          const badges = document.getElementById('valBadges');
+          card.className = 'validation-card error';
+          sum.textContent = 'No se detectaron adaptadores de red disponibles en el sistema.';
+          badges.innerHTML = '';
+          return;
+        }
         adapters.forEach(a => {
           const opt = document.createElement('option');
           opt.value = a.name;
@@ -977,7 +1003,10 @@
     }
 
     async function validateSelected() {
-      const adapter = document.getElementById('adapterSelect').value;
+      const sel = document.getElementById('adapterSelect');
+      const adapter = sel ? sel.value : '';
+      if (!adapter) return;
+
       const remote = document.getElementById('remoteUrlInput').value;
       const card = document.getElementById('validationCard');
       const sum = document.getElementById('valSummary');
@@ -1106,6 +1135,10 @@
       if (isScanning) return;
 
       const adapter = document.getElementById('adapterSelect').value;
+      if (!adapter) {
+        showToast('Seleccione o conecte una interfaz de red válida primero.', '⚠️');
+        return;
+      }
       const duration = parseInt(document.getElementById('durationInput').value) || 62;
       const append = document.getElementById('appendToggle').checked;
       const remote = document.getElementById('remoteUrlInput').value;
