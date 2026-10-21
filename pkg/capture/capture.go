@@ -30,27 +30,60 @@ func (e *WindowsETWCapture) Capture(ctx context.Context, adapterName string, dur
 
 	seconds := int(duration.Seconds())
 	if seconds <= 0 {
-		seconds = 62
+		seconds = 65
 	}
+
+	cleanAdapter := strings.ReplaceAll(adapterName, "'", "''")
 
 	script := fmt.Sprintf(`
 $ErrorActionPreference = 'Stop'
 $sn = "SREDiscovery-" + ([guid]::NewGuid().ToString('N').Substring(0,8))
 $etl = Join-Path $env:TEMP ($sn + ".etl")
 $started = $false
+
 try {
-    Get-NetEventSession -Name "SREDiscovery-*" -ErrorAction SilentlyContinue | Remove-NetEventSession -Confirm:$false -ErrorAction SilentlyContinue
-    New-NetEventSession -Name $sn -LocalFilePath $etl -CaptureMode SaveToFile -ErrorAction Stop | Out-Null
-    Add-NetEventPacketCaptureProvider -SessionName $sn -CaptureType Physical -TruncationLength 0 -LinkLayerAddress @('01-80-C2-00-00-0E','01-80-C2-00-00-03','01-80-C2-00-00-00','01-00-0C-CC-CC-CC') -ErrorAction Stop | Out-Null
-    if ("%s") {
-        Add-NetEventNetworkAdapter -Name "%s" -PromiscuousMode $true -ErrorAction Stop | Out-Null
+    # 1. Limpieza rigurosa de cualquier sesion colgada previa
+    Get-NetEventSession -ErrorAction SilentlyContinue | ForEach-Object {
+        if ($_.SessionStatus -eq 'Running') {
+            Stop-NetEventSession -Name $_.Name -ErrorAction SilentlyContinue | Out-Null
+        }
+        Remove-NetEventSession -Name $_.Name -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
     }
+
+    # 2. Inicializar nueva sesion ETW
+    New-NetEventSession -Name $sn -LocalFilePath $etl -CaptureMode SaveToFile -ErrorAction Stop | Out-Null
+
+    # 3. Proveedor con filtros de multicast CDP y LLDP
+    $llAddrs = @('01-80-C2-00-00-0E','01-80-C2-00-00-03','01-80-C2-00-00-00','01-00-0C-CC-CC-CC')
+    Add-NetEventPacketCaptureProvider -SessionName $sn -CaptureType Physical -TruncationLength 0 -LinkLayerAddress $llAddrs -ErrorAction Stop | Out-Null
+
+    # 4. Seleccion y vinculacion robusta de interfaces (soporta dongles USB-C, docking y Ethernet)
+    $targetAdapters = @()
+    if ('%s') {
+        $targetAdapters = @(Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { 
+            $_.Name -eq '%s' -or $_.InterfaceAlias -eq '%s' -or $_.InterfaceDescription -like '*%s*' 
+        })
+    }
+    if ($targetAdapters.Count -eq 0) {
+        $targetAdapters = @(Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { 
+            $_.Status -eq 'Up' -and $_.InterfaceType -notin @(23, 24) 
+        })
+    }
+
+    foreach ($ad in $targetAdapters) {
+        Add-NetEventNetworkAdapter -Name $ad.Name -PromiscuousMode $true -ErrorAction SilentlyContinue | Out-Null
+    }
+
     Start-NetEventSession -Name $sn -ErrorAction Stop | Out-Null
     $started = $true
+
+    # 5. Espera con margen para superar Spanning Tree y ciclo de broadcast
     Start-Sleep -Seconds %d
+
     Stop-NetEventSession -Name $sn -ErrorAction Stop | Out-Null
     $started = $false
 
+    # 6. Extraccion de eventos de fragmento de red
     $events = @(Get-WinEvent -Path $etl -Oldest -FilterXPath "*[System[EventID=1001]]" -ErrorAction SilentlyContinue)
     $xq = [string[]]@("Event/EventData/Data[@Name='Fragment']")
     $sel = [Diagnostics.Eventing.Reader.EventLogPropertySelector]::new($xq)
@@ -68,7 +101,7 @@ try {
     Remove-NetEventSession -Name $sn -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
     if (Test-Path -LiteralPath $etl) { Remove-Item -LiteralPath $etl -Force -ErrorAction SilentlyContinue }
 }
-`, adapterName, adapterName, seconds)
+`, cleanAdapter, cleanAdapter, cleanAdapter, cleanAdapter, seconds)
 
 	cmd := exec.CommandContext(ctx, "powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script)
 	var outBuf bytes.Buffer
@@ -122,4 +155,3 @@ try {
 
 	return results, nil
 }
-
