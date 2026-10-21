@@ -44,6 +44,23 @@ func (s *Server) routes() http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+		if path == "/favicon.ico" {
+			data, err := webFS.ReadFile("web/favicon.ico")
+			if err == nil {
+				w.Header().Set("Content-Type", "image/x-icon")
+				w.Write(data)
+				return
+			}
+		} else if path == "/logo.png" {
+			data, err := webFS.ReadFile("web/logo.png")
+			if err == nil {
+				w.Header().Set("Content-Type", "image/png")
+				w.Write(data)
+				return
+			}
+		}
+
 		data, err := webFS.ReadFile("web/index.html")
 		if err != nil {
 			http.Error(w, "Error cargando interfaz web", 500)
