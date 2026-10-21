@@ -231,3 +231,4 @@ func (inv *Inventory) SaveCSV(path string) error {
 	}
 	return nil
 }
+

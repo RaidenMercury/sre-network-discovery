@@ -111,3 +111,4 @@ func TestInventorySaveAndLoad(t *testing.T) {
 		t.Errorf("expected CORE-01, got %s", loaded.Devices[0].SwitchName)
 	}
 }
+

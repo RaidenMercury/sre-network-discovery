@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/RaidenMercury/sre-network-discovery/pkg/engine"
+	"github.com/RaidenMercury/sre-network-discovery/pkg/gui"
 	"github.com/RaidenMercury/sre-network-discovery/pkg/link"
 )
 
@@ -26,6 +27,8 @@ func printBanner() {
 }
 
 func main() {
+	guiFlag := flag.Bool("gui", false, "Abrir la interfaz gráfica de usuario interactiva")
+	cliFlag := flag.Bool("cli", false, "Forzar modo consola CLI")
 	adapterFlag := flag.String("i", "", "Nombre del adaptador de red (vacio para deteccion automatica)")
 	durationFlag := flag.Int("d", 62, "Duracion de captura en segundos (default 62s)")
 	validateFlag := flag.Bool("v", true, "Validar conexion de punto de red antes de escanear")
@@ -36,8 +39,29 @@ func main() {
 	csvFlag := flag.Bool("csv", true, "Generar tambien reporte en formato CSV (.csv)")
 	remoteFlag := flag.String("remote", "", "URL HTTPS de canal seguro para envio automatico de datos")
 	listFlag := flag.Bool("list", false, "Listar adaptadores de red disponibles y salir")
+	portFlag := flag.Int("port", 0, "Puerto local para la interfaz gráfica (0 para aleatorio)")
 
 	flag.Parse()
+
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+
+	shouldRunGUI := false
+	if *guiFlag {
+		shouldRunGUI = true
+	} else if !*cliFlag && len(os.Args) == 1 {
+		shouldRunGUI = true
+	}
+
+	if shouldRunGUI {
+		printBanner()
+		fmt.Println("[*] Iniciando Interfaz Gráfica interactiva de escritorio...")
+		if err := gui.Launch(ctx, *outputFlag, *portFlag, true); err != nil && err != context.Canceled {
+			fmt.Fprintf(os.Stderr, "[ERROR GUI] %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
 
 	printBanner()
 
@@ -45,9 +69,6 @@ func main() {
 		listAdapters()
 		return
 	}
-
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer cancel()
 
 	cfg := engine.Config{
 		AdapterName:       *adapterFlag,

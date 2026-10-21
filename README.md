@@ -53,30 +53,39 @@ sre-network-discovery/
 
 ---
 
-## Uso del Ejecutable en Windows
+## Uso en Windows
 
-> **Nota:** La captura de tramas de capa 2 mediante ETW requiere ejecutarse con privilegios de **Administrador**.
+El programa cuenta con **modo dual inteligente**:
+- **Doble clic en Windows Explorer**: Abre inmediatamente la **Interfaz Gráfica de Escritorio (GUI)** interactiva, moderna y con tema oscuro.
+- **Línea de comandos (CMD / PowerShell)**: Si se pasa `--cli` o argumentos específicos, se ejecuta en modo CLI headless para automatización o scripts.
 
-### 1. Escaneo Simple (Predeterminado)
-Valida el punto de red y captura anuncios durante 62 segundos:
+> **Nota:** La captura de tramas de capa 2 mediante ETW requiere ejecutarse con privilegios de **Administrador** (Clic derecho -> *Ejecutar como administrador*).
+
+### 1. Interfaz Gráfica (Predeterminado)
+Basta con hacer doble clic sobre `sre-network-discovery.exe` o ejecutar:
 ```cmd
 sre-network-discovery.exe
 ```
+Se abrirá la ventana con:
+- Selector de tarjeta de red con badge de estado en tiempo real.
+- Panel de validación de punto de red (Carrier, IP, Gateway, DNS, TLS).
+- Barra de progreso interactiva durante la captura.
+- Vista de tarjetas modernas para cada switch detectado y vista de texto plano.
+- Switches para alternar Modo Acumulativo (`-a`) y Modo Auto-Extracción al enchufar cable.
+- Botones de exportación instantánea a JSON, Markdown y CSV.
 
-### 2. Modo Acumulativo (Sumar escaneos a un reporte maestro)
-Si estás probando varias bocas de red o switches y quieres un reporte global consolidado:
+### 2. Modo Consola (CLI Headless)
 ```cmd
-sre-network-discovery.exe -a
-```
+:: Escaneo rápido en consola
+sre-network-discovery.exe --cli
 
-### 3. Modo Extracción Automática
-Deja el programa corriendo mientras conectas cables en distintos puertos:
-```cmd
+:: Modo acumulativo (suma este escaneo al reporte maestro previo)
+sre-network-discovery.exe --cli -a
+
+:: Modo automático continuo (dejar corriendo en consola mientras pruebas puertos)
 sre-network-discovery.exe --auto -a
-```
 
-### 4. Listar adaptadores disponibles
-```cmd
+:: Listar tarjetas de red
 sre-network-discovery.exe --list
 ```
 

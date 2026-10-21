@@ -128,3 +128,4 @@ func TestParseCDP(t *testing.T) {
 		t.Errorf("expected VLAN 40, got %d", res.VLAN)
 	}
 }
+
