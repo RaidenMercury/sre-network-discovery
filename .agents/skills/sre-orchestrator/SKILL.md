@@ -105,3 +105,4 @@ Invoke the appropriate installed plugin skills based on the subsystem:
 3. **Ponytail Review & Clean-up (`ponytail-review` & `finishing-a-development-branch`)**:
    - Review git diff to ensure no leftover debug code, excessive abstractions, or unnecessary dependencies.
    - Update `GRAPH_REPORT.md` / `graphify --update` if codebase topology changed.
+
