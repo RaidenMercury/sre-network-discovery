@@ -1,21 +1,33 @@
-# Environments and caches
-.cache/
-__pycache__/
-*.pyc
-
-# Build outputs
+# Binaries and build outputs
 bin/
-obj/
+*.exe
+*.dll
+*.so
+*.dylib
 dist/
 build/
 out/
 target/
 
-# Node
-node_modules/
+# Go
+/vendor/
+
+# Python
+__pycache__/
+*.py[codz]
+*$py.class
+*.spec
+*.manifest
+.venv/
+venv/
+env/
+.pytest_cache/
 
 # OS and Editor
 .DS_Store
 Thumbs.db
 .idea/
 .vscode/
+*.swp
+*.tmp
+*.etl

@@ -1,0 +1,16 @@
+[project]
+name = "sre-network-discovery"
+version = "1.0.0"
+description = "CDP/LLDP network discovery for Windows via ETW"
+authors = [{name = "RaidenMercury"}]
+dependencies = [
+    "flet>=1.0.0",
+    "psutil>=7.0.0",
+    "certifi>=2025.6.15",
+]
+
+[tool.flet]
+org = "cl.raidenmercury"
+product = "SRE Network Discovery"
+company = "RaidenMercury"
+copyright = "Copyright (c) 2026 RaidenMercury - GPL-3.0"
