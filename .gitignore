@@ -1,0 +1,21 @@
+# Environments and caches
+.cache/
+__pycache__/
+*.pyc
+
+# Build outputs
+bin/
+obj/
+dist/
+build/
+out/
+target/
+
+# Node
+node_modules/
+
+# OS and Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
