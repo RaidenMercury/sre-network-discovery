@@ -40,6 +40,7 @@ func main() {
 	remoteFlag := flag.String("remote", "", "URL HTTPS de canal seguro para envio automatico de datos")
 	listFlag := flag.Bool("list", false, "Listar adaptadores de red disponibles y salir")
 	portFlag := flag.Int("port", 0, "Puerto local para la interfaz gráfica (0 para aleatorio)")
+	hostFlag := flag.String("host", "0.0.0.0", "Dirección IP de escucha para la interfaz web")
 
 	flag.Parse()
 
@@ -56,7 +57,7 @@ func main() {
 	if shouldRunGUI {
 		printBanner()
 		fmt.Println("[*] Iniciando Interfaz Gráfica interactiva de escritorio...")
-		if err := gui.Launch(ctx, *outputFlag, *portFlag, true); err != nil && err != context.Canceled {
+		if err := gui.Launch(ctx, *outputFlag, *hostFlag, *portFlag, false); err != nil && err != context.Canceled {
 			fmt.Fprintf(os.Stderr, "[ERROR GUI] %v\n", err)
 			os.Exit(1)
 		}

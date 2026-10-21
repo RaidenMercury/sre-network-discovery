@@ -158,13 +158,16 @@ func (s *Server) routes() http.Handler {
 	return mux
 }
 
-func Launch(ctx context.Context, inventoryFile string, port int, openWindow bool) error {
-	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+func Launch(ctx context.Context, inventoryFile string, host string, port int, openWindow bool) error {
+	if host == "" {
+		host = "0.0.0.0"
+	}
+	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
 		return fmt.Errorf("no se pudo abrir puerto local: %w", err)
 	}
 	actualPort := listener.Addr().(*net.TCPAddr).Port
-	url := fmt.Sprintf("http://127.0.0.1:%d", actualPort)
+	url := fmt.Sprintf("http://localhost:%d", actualPort)
 
 	srv := NewServer(inventoryFile)
 	httpServer := &http.Server{
@@ -183,7 +186,10 @@ func Launch(ctx context.Context, inventoryFile string, port int, openWindow bool
 		}()
 	}
 
-	fmt.Printf("[+] Interfaz Gráfica iniciada en: %s\n", url)
+	fmt.Printf("[+] Interfaz Gráfica activa y accesible en:\n")
+	fmt.Printf("    - Local:     http://localhost:%d\n", actualPort)
+	fmt.Printf("    - Tailscale: http://100.82.249.16:%d\n", actualPort)
+	fmt.Printf("    - LAN:       http://192.168.1.85:%d\n", actualPort)
 	if err := httpServer.Serve(listener); err != nil && err != http.ErrServerClosed {
 		return err
 	}
