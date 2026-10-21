@@ -3,175 +3,269 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SRE Network Discovery</title>
+  <title>SRE Network Discovery Studio</title>
   <style>
     :root {
-      --bg: #0f1119;
-      --card-bg: rgba(30, 34, 53, 0.7);
-      --card-border: rgba(45, 51, 80, 0.8);
-      --text: #e8ecf5;
-      --muted: #8891b0;
-      --accent: #5b8def;
-      --accent-hover: #4a7bdc;
-      --success: #4ade80;
-      --warning: #fbbf24;
-      --error: #f87171;
-      --radius: 12px;
+      --bg: #090b10;
+      --surface: #101422;
+      --card-bg: rgba(18, 22, 38, 0.72);
+      --card-border: rgba(91, 141, 239, 0.18);
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --accent: #3b82f6;
+      --accent-glow: rgba(59, 130, 246, 0.4);
+      --cyan: #06b6d4;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --error: #ef4444;
+      --purple: #8b5cf6;
+      --radius: 14px;
     }
 
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
       user-select: none;
     }
 
     body {
       background-color: var(--bg);
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(59, 130, 246, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 85% 85%, rgba(139, 92, 246, 0.08) 0%, transparent 40%);
       color: var(--text);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Radar Background Canvas */
+    #radarCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.35;
     }
 
     header {
-      background: rgba(20, 24, 38, 0.85);
-      backdrop-filter: blur(12px);
+      background: rgba(14, 18, 30, 0.85);
+      backdrop-filter: blur(20px);
       border-bottom: 1px solid var(--card-border);
-      padding: 14px 20px;
+      padding: 14px 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       position: sticky;
       top: 0;
       z-index: 100;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
     }
 
     .brand {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
     }
 
     .brand-icon {
-      width: 32px;
-      height: 32px;
-      background: linear-gradient(135deg, var(--accent), #8b5cf6);
-      border-radius: 8px;
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, var(--accent), var(--cyan));
+      border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: bold;
-      font-size: 16px;
+      font-weight: 800;
+      font-size: 18px;
       color: #fff;
-      box-shadow: 0 2px 8px rgba(91, 141, 239, 0.4);
+      box-shadow: 0 0 20px var(--accent-glow);
+      position: relative;
+    }
+
+    .brand-icon::after {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent), var(--purple));
+      z-index: -1;
+      opacity: 0.6;
+      filter: blur(4px);
     }
 
     .brand-text h1 {
-      font-size: 16px;
+      font-size: 17px;
       font-weight: 700;
-      letter-spacing: -0.3px;
+      letter-spacing: -0.4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-text .version-tag {
+      font-size: 10px;
+      background: rgba(59, 130, 246, 0.2);
+      color: var(--cyan);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      padding: 1px 6px;
+      border-radius: 10px;
+      font-weight: 600;
     }
 
     .brand-text p {
-      font-size: 11px;
+      font-size: 12px;
       color: var(--muted);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
 
     .status-badge {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       font-size: 11px;
       font-weight: 600;
-      padding: 4px 10px;
+      padding: 6px 14px;
       border-radius: 20px;
-      background: rgba(74, 222, 128, 0.12);
+      background: rgba(16, 185, 129, 0.12);
       color: var(--success);
-      border: 1px solid rgba(74, 222, 128, 0.25);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.15);
+      transition: all 0.3s ease;
+    }
+
+    .status-badge.scanning {
+      background: rgba(59, 130, 246, 0.15);
+      color: var(--cyan);
+      border-color: rgba(6, 182, 212, 0.4);
+      box-shadow: 0 0 14px rgba(6, 182, 212, 0.3);
     }
 
     .status-dot {
-      width: 7px;
-      height: 7px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
       background: currentColor;
+      box-shadow: 0 0 8px currentColor;
+    }
+
+    .status-badge.scanning .status-dot {
+      animation: pulse 1.2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.9); opacity: 0.6; }
+      50% { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(0.9); opacity: 0.6; }
     }
 
     main {
-      padding: 18px 20px;
+      padding: 24px;
       flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 16px;
-      max-width: 900px;
+      gap: 20px;
+      max-width: 980px;
       margin: 0 auto;
       width: 100%;
+      z-index: 1;
     }
 
     .glass-panel {
       background: var(--card-bg);
-      backdrop-filter: blur(16px);
+      backdrop-filter: blur(24px);
       border: 1px solid var(--card-border);
       border-radius: var(--radius);
-      padding: 16px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+      padding: 20px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .glass-panel::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+    }
+
+    .glass-panel:hover {
+      border-color: rgba(91, 141, 239, 0.35);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
     }
 
     .form-group {
       display: flex;
       flex-direction: column;
-      gap: 6px;
-      margin-bottom: 12px;
+      gap: 8px;
+      margin-bottom: 14px;
     }
 
     .form-group label {
-      font-size: 12px;
-      font-weight: 600;
+      font-size: 11px;
+      font-weight: 700;
       color: var(--muted);
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.8px;
     }
 
     select, input {
-      background: #141724;
+      background: rgba(16, 20, 34, 0.9);
       border: 1px solid var(--card-border);
       color: var(--text);
-      padding: 10px 12px;
-      border-radius: 8px;
+      padding: 12px 14px;
+      border-radius: 10px;
       font-size: 13px;
       outline: none;
-      transition: border-color 0.2s;
+      transition: all 0.2s;
     }
 
     select:focus, input:focus {
-      border-color: var(--accent);
+      border-color: var(--cyan);
+      box-shadow: 0 0 12px rgba(6, 182, 212, 0.25);
     }
 
     .controls-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
     }
 
-    .toggle-row {
+    .toggle-card {
+      background: rgba(22, 28, 48, 0.6);
+      border: 1px solid rgba(91, 141, 239, 0.12);
+      border-radius: 10px;
+      padding: 12px 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 8px 4px;
     }
 
-    .toggle-row span {
+    .toggle-card span {
       font-size: 13px;
-      color: var(--text);
+      font-weight: 500;
     }
 
     .switch {
       position: relative;
       display: inline-block;
-      width: 44px;
+      width: 46px;
       height: 24px;
     }
 
@@ -185,7 +279,7 @@
       position: absolute;
       cursor: pointer;
       top: 0; left: 0; right: 0; bottom: 0;
-      background-color: #2d3350;
+      background-color: #27304d;
       transition: .3s;
       border-radius: 24px;
     }
@@ -203,85 +297,133 @@
     }
 
     input:checked + .slider {
-      background-color: var(--accent);
+      background: linear-gradient(135deg, var(--accent), var(--cyan));
+      box-shadow: 0 0 12px var(--accent-glow);
     }
 
     input:checked + .slider:before {
-      transform: translateX(20px);
+      transform: translateX(22px);
+    }
+
+    .validation-card {
+      border-left: 4px solid var(--accent);
+      padding: 14px 18px;
+      background: rgba(59, 130, 246, 0.06);
+      border-radius: 0 12px 12px 0;
+      font-size: 13px;
+      line-height: 1.6;
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: all 0.3s;
+    }
+
+    .validation-card.ok {
+      border-left-color: var(--success);
+      background: rgba(16, 185, 129, 0.07);
+    }
+
+    .validation-card.error {
+      border-left-color: var(--error);
+      background: rgba(239, 68, 68, 0.07);
+    }
+
+    .validation-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .v-badge {
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 6px;
+      background: rgba(16, 20, 34, 0.8);
+      border: 1px solid var(--card-border);
+      display: flex;
+      align-items: center;
+      gap: 5px;
     }
 
     .btn-primary {
       background: linear-gradient(135deg, var(--accent), #4f46e5);
       border: none;
       color: white;
-      padding: 12px 18px;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 600;
+      padding: 14px 22px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 700;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      transition: transform 0.1s, opacity 0.2s;
-      box-shadow: 0 4px 14px rgba(91, 141, 239, 0.35);
+      gap: 10px;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
       width: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-primary::after {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(60deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+      transform: rotate(30deg);
+      transition: transform 0.6s;
+    }
+
+    .btn-primary:hover::after {
+      transform: rotate(30deg) translate(20%, 20%);
     }
 
     .btn-primary:hover {
-      opacity: 0.95;
+      box-shadow: 0 8px 26px rgba(59, 130, 246, 0.6);
+      transform: translateY(-1px);
     }
 
     .btn-primary:active {
-      transform: scale(0.98);
+      transform: translateY(1px);
     }
 
     .btn-primary:disabled {
       opacity: 0.5;
       cursor: not-allowed;
-    }
-
-    .validation-box {
-      border-left: 3px solid var(--accent);
-      padding: 10px 14px;
-      background: rgba(91, 141, 239, 0.08);
-      border-radius: 0 8px 8px 0;
-      font-size: 12px;
-      line-height: 1.5;
-    }
-
-    .validation-box.ok {
-      border-left-color: var(--success);
-      background: rgba(74, 222, 128, 0.08);
-    }
-
-    .validation-box.error {
-      border-left-color: var(--error);
-      background: rgba(248, 113, 113, 0.08);
+      transform: none;
+      box-shadow: none;
     }
 
     .progress-container {
       display: none;
       flex-direction: column;
-      gap: 8px;
-      padding: 14px;
-      background: rgba(20, 24, 38, 0.7);
-      border-radius: 8px;
+      gap: 10px;
+      padding: 16px;
+      background: rgba(16, 20, 34, 0.8);
+      border-radius: 10px;
       border: 1px solid var(--card-border);
+      margin-top: 14px;
     }
 
     .progress-bar-bg {
       height: 8px;
-      background: #1e2235;
-      border-radius: 4px;
+      background: #1c2238;
+      border-radius: 6px;
       overflow: hidden;
+      position: relative;
     }
 
     .progress-bar-fill {
       height: 100%;
-      background: linear-gradient(90deg, var(--accent), var(--success));
+      background: linear-gradient(90deg, var(--accent), var(--cyan), var(--success));
       width: 0%;
-      transition: width 0.3s;
+      transition: width 0.3s ease;
+      box-shadow: 0 0 10px var(--cyan);
     }
 
     .progress-labels {
@@ -289,176 +431,341 @@
       justify-content: space-between;
       font-size: 12px;
       color: var(--muted);
+      font-weight: 500;
     }
 
+    /* Tabs & Views */
     .tab-bar {
       display: flex;
-      gap: 8px;
+      gap: 6px;
       border-bottom: 1px solid var(--card-border);
-      padding-bottom: 8px;
+      padding-bottom: 12px;
+      margin-bottom: 16px;
     }
 
     .tab-btn {
-      background: none;
+      background: transparent;
       border: none;
       color: var(--muted);
       font-size: 13px;
       font-weight: 600;
-      padding: 6px 14px;
-      border-radius: 6px;
+      padding: 8px 16px;
+      border-radius: 8px;
       cursor: pointer;
-      transition: color 0.2s, background 0.2s;
+      transition: all 0.2s;
+    }
+
+    .tab-btn:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.05);
     }
 
     .tab-btn.active {
-      color: var(--text);
-      background: rgba(91, 141, 239, 0.15);
+      color: #fff;
+      background: rgba(59, 130, 246, 0.18);
+      border: 1px solid rgba(59, 130, 246, 0.35);
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
     }
 
+    /* Cards Grid */
     .cards-grid {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+      gap: 16px;
     }
 
     .switch-card {
-      background: #141724;
+      background: rgba(16, 21, 38, 0.8);
       border: 1px solid var(--card-border);
-      border-radius: 10px;
-      padding: 14px 16px;
+      border-radius: 12px;
+      padding: 18px;
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      transition: border-color 0.2s, transform 0.1s;
+      gap: 14px;
+      position: relative;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
     }
 
     .switch-card:hover {
-      border-color: rgba(91, 141, 239, 0.5);
+      border-color: rgba(6, 182, 212, 0.5);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35), 0 0 16px rgba(6, 182, 212, 0.15);
     }
 
     .card-top {
       display: flex;
       align-items: center;
       justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      padding-bottom: 10px;
     }
 
     .card-title {
-      font-size: 15px;
+      font-size: 16px;
       font-weight: 700;
-      color: var(--text);
+      color: #fff;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
     }
 
     .badge-proto {
-      background: rgba(91, 141, 239, 0.2);
-      color: var(--accent);
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 10px;
+      background: rgba(59, 130, 246, 0.2);
+      color: var(--cyan);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
       font-weight: 700;
+      letter-spacing: 0.5px;
     }
 
     .badge-vlan {
-      background: rgba(251, 191, 36, 0.15);
+      background: rgba(245, 158, 11, 0.18);
       color: var(--warning);
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: 600;
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
     }
 
     .card-details {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 8px;
-      font-size: 12px;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
     }
 
     .detail-item {
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: 3px;
     }
 
     .detail-item span.label {
       color: var(--muted);
       font-size: 10px;
       text-transform: uppercase;
-      font-weight: 600;
+      font-weight: 700;
+      letter-spacing: 0.5px;
     }
 
     .detail-item span.value {
       color: var(--text);
+      font-size: 13px;
       font-weight: 500;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: 36px 16px;
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    .export-row {
       display: flex;
-      gap: 8px;
-      justify-content: flex-end;
-    }
-
-    .btn-secondary {
-      background: #1c2033;
-      border: 1px solid var(--card-border);
-      color: var(--text);
-      padding: 6px 12px;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: 600;
+      align-items: center;
+      gap: 6px;
       cursor: pointer;
     }
 
+    .detail-item span.value:hover {
+      color: var(--cyan);
+    }
+
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* Topology Map View */
+    #topologyView {
+      display: none;
+      padding: 20px;
+      background: rgba(12, 16, 28, 0.85);
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+      text-align: center;
+    }
+
+    .topology-flow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      flex-wrap: wrap;
+      margin: 30px 0;
+    }
+
+    .topo-node {
+      background: #182038;
+      border: 1px solid rgba(91, 141, 239, 0.3);
+      padding: 16px 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+      min-width: 170px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      position: relative;
+    }
+
+    .topo-node::after {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: 13px;
+      background: linear-gradient(135deg, var(--accent), transparent);
+      z-index: -1;
+      opacity: 0.4;
+    }
+
+    .topo-arrow {
+      font-size: 24px;
+      color: var(--cyan);
+      animation: bounceX 1.5s infinite;
+    }
+
+    @keyframes bounceX {
+      0%, 100% { transform: translateX(0); }
+      50% { transform: translateX(6px); }
+    }
+
+    /* Actions and Buttons */
+    .download-dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    .btn-secondary {
+      background: rgba(28, 36, 62, 0.7);
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
     .btn-secondary:hover {
-      background: #252b45;
+      background: rgba(45, 57, 98, 0.9);
+      border-color: var(--cyan);
+      color: #fff;
+    }
+
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 105%;
+      background: #141a2e;
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      min-width: 190px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      z-index: 200;
+      overflow: hidden;
+    }
+
+    .dropdown-content a {
+      color: var(--text);
+      padding: 10px 14px;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+
+    .dropdown-content a:hover {
+      background: rgba(59, 130, 246, 0.15);
+      color: var(--cyan);
+    }
+
+    .show-dropdown {
+      display: block;
+      animation: fadeIn 0.15s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Toast Notification */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #182038;
+      border: 1px solid var(--cyan);
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 16px rgba(6, 182, 212, 0.3);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 999;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
+    }
+
+    #toast.show {
+      transform: translateY(0);
+      opacity: 1;
     }
   </style>
 </head>
 <body>
+  <canvas id="radarCanvas"></canvas>
+
   <header>
     <div class="brand">
       <div class="brand-icon">⚡</div>
       <div class="brand-text">
-        <h1>SRE Network Discovery</h1>
-        <p>CDP / LLDP Native Scanner v2.0</p>
+        <h1>SRE Network Discovery <span class="version-tag">PRO v2.0</span></h1>
+        <p>Switch Reconnaissance & Link Topology Engine</p>
       </div>
     </div>
-    <div class="status-badge" id="appStatus">
-      <div class="status-dot"></div>
-      <span id="appStatusText">Listo</span>
+    <div class="header-actions">
+      <div class="status-badge" id="appStatus">
+        <div class="status-dot"></div>
+        <span id="appStatusText">Listo</span>
+      </div>
     </div>
   </header>
 
   <main>
     <div class="glass-panel">
       <div class="form-group">
-        <label for="adapterSelect">Adaptador de Red Físico</label>
+        <label for="adapterSelect">Interfaz de Red Física (Ethernet)</label>
         <select id="adapterSelect"></select>
       </div>
 
-      <div class="validation-box" id="validationBox" style="margin-bottom: 14px;">
-        <div id="validationText">Seleccione un adaptador para comprobar enlace.</div>
+      <div class="validation-card" id="validationCard">
+        <div style="font-weight: 700;" id="valSummary">Comprobando enlace de red...</div>
+        <div class="validation-badges" id="valBadges"></div>
       </div>
 
       <div class="controls-grid">
-        <div class="toggle-row">
+        <div class="toggle-card">
           <span>Modo Acumulativo (-a)</span>
           <label class="switch">
             <input type="checkbox" id="appendToggle" checked>
             <span class="slider"></span>
           </label>
         </div>
-        <div class="toggle-row">
+        <div class="toggle-card">
           <span>Auto-Extracción al Enchufar</span>
           <label class="switch">
             <input type="checkbox" id="autoToggle">
@@ -467,25 +774,25 @@
         </div>
       </div>
 
-      <div class="controls-grid" style="margin-top: 8px; margin-bottom: 14px;">
+      <div class="controls-grid" style="margin-top: 12px; margin-bottom: 16px;">
         <div class="form-group" style="margin-bottom: 0;">
-          <label for="durationInput">Duración (segundos)</label>
+          <label for="durationInput">Duración de Escucha (segundos)</label>
           <input type="number" id="durationInput" value="62" min="10" max="300">
         </div>
         <div class="form-group" style="margin-bottom: 0;">
-          <label for="remoteUrlInput">Canal Seguro Remoto (Opcional)</label>
-          <input type="text" id="remoteUrlInput" placeholder="https://api.empresa.com/sre">
+          <label for="remoteUrlInput">Canal Seguro Remoto HTTPS (Opcional)</label>
+          <input type="text" id="remoteUrlInput" placeholder="https://sre.empresa.com/api/v1/topology">
         </div>
       </div>
 
       <button class="btn-primary" id="startBtn" onclick="toggleScan()">
-        <span id="btnIcon">▶</span>
-        <span id="btnText">Iniciar Escaneo de Red</span>
+        <span id="btnIcon">⚡</span>
+        <span id="btnText">Iniciar Reconocimiento de Punto de Red</span>
       </button>
 
-      <div class="progress-container" id="progressContainer" style="margin-top: 14px;">
+      <div class="progress-container" id="progressContainer">
         <div class="progress-labels">
-          <span id="progressStatus">Capturando tramas L2...</span>
+          <span id="progressStatus">Capturando tramas L2 (CDP / LLDP)...</span>
           <span id="progressTimer">0s / 62s</span>
         </div>
         <div class="progress-bar-bg">
@@ -496,34 +803,157 @@
 
     <div class="glass-panel">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-        <div class="tab-bar">
+        <div class="tab-bar" style="margin-bottom: 0; padding-bottom: 0; border-bottom: none;">
           <button class="tab-btn active" id="tabCards" onclick="setTab('cards')">Tarjetas (<span id="countDevices">0</span>)</button>
-          <button class="tab-btn" id="tabText" onclick="setTab('text')">Texto Plano</button>
+          <button class="tab-btn" id="tabTopology" onclick="setTab('topology')">Mapa Topológico</button>
+          <button class="tab-btn" id="tabText" onclick="setTab('text')">JSON Raw</button>
         </div>
-        <div class="export-row">
-          <button class="btn-secondary" onclick="exportReport('json')">JSON</button>
-          <button class="btn-secondary" onclick="exportReport('md')">Markdown</button>
-          <button class="btn-secondary" onclick="exportReport('csv')">CSV</button>
+
+        <div style="display: flex; gap: 8px;">
+          <div class="download-dropdown">
+            <button class="btn-secondary" onclick="toggleDownloadMenu()">
+              <span>📥 Descargar Reporte</span>
+              <span style="font-size: 9px;">▼</span>
+            </button>
+            <div class="dropdown-content" id="downloadMenu">
+              <a href="/api/export?format=json" download="sre_network_inventory.json">
+                <span>JSON Estructurado</span>
+                <span style="color: var(--cyan);">.json</span>
+              </a>
+              <a href="/api/export?format=md" download="sre_network_inventory.md">
+                <span>Reporte Markdown</span>
+                <span style="color: var(--cyan);">.md</span>
+              </a>
+              <a href="/api/export?format=csv" download="sre_network_inventory.csv">
+                <span>Planilla de Cálculo</span>
+                <span style="color: var(--cyan);">.csv</span>
+              </a>
+            </div>
+          </div>
           <button class="btn-secondary" onclick="clearResults()">Limpiar</button>
         </div>
       </div>
 
       <div id="cardsView" class="cards-grid">
-        <div class="empty-state">
-          No hay switches registrados aún.<br>Inicie un escaneo para capturar anuncios CDP/LLDP del puerto.
+        <div style="grid-column: 1 / -1; text-align: center; padding: 48px 16px; color: var(--muted); font-size: 13px;">
+          No hay switches registrados aún.<br>Inicie un escaneo para escuchar anuncios del switch conectado.
         </div>
       </div>
 
+      <div id="topologyView">
+        <h3 style="font-size: 15px; color: #fff; margin-bottom: 6px;">Topología Punto a Punto Detectada</h3>
+        <p style="font-size: 12px; color: var(--muted);">Trazado lógico desde la tarjeta física del host hasta el switch de acceso.</p>
+        <div class="topology-flow" id="topoFlow"></div>
+      </div>
+
       <div id="textView" style="display: none;">
-        <textarea id="rawText" readonly style="width: 100%; height: 260px; background: #141724; border: 1px solid var(--card-border); color: #a5b4fc; padding: 12px; border-radius: 8px; font-family: monospace; font-size: 11px;"></textarea>
+        <textarea id="rawText" readonly style="width: 100%; height: 280px; background: rgba(14, 18, 32, 0.9); border: 1px solid var(--card-border); color: #93c5fd; padding: 14px; border-radius: 10px; font-family: ui-monospace, monospace; font-size: 12px; outline: none;"></textarea>
       </div>
     </div>
   </main>
 
+  <div id="toast">
+    <span id="toastIcon">📋</span>
+    <span id="toastMsg">Copiado al portapapeles</span>
+  </div>
+
   <script>
+    // --- Canvas Radar Scanner Effect ---
+    const canvas = document.getElementById('radarCanvas');
+    const ctx = canvas.getContext('2d');
+    let angle = 0;
+    let blips = [];
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function drawRadar() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      const maxRadius = Math.max(canvas.width, canvas.height) * 0.7;
+
+      ctx.strokeStyle = 'rgba(59, 130, 246, 0.05)';
+      ctx.lineWidth = 1;
+      for (let r = 80; r < maxRadius; r += 120) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      if (isScanning) {
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(angle);
+        const grad = ctx.createLinearGradient(0, 0, maxRadius, 0);
+        grad.addColorStop(0, 'rgba(6, 182, 212, 0.25)');
+        grad.addColorStop(1, 'transparent');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, maxRadius, 0, Math.PI / 4);
+        ctx.fill();
+        ctx.restore();
+
+        angle += 0.035;
+
+        if (Math.random() < 0.03) {
+          blips.push({
+            x: cx + (Math.random() - 0.5) * maxRadius * 1.2,
+            y: cy + (Math.random() - 0.5) * maxRadius * 1.2,
+            alpha: 1
+          });
+        }
+      }
+
+      blips.forEach((b, idx) => {
+        ctx.fillStyle = `rgba(6, 182, 212, ${b.alpha})`;
+        ctx.shadowColor = '#06b6d4';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, 3, 0, Math.PI * 2);
+        ctx.fill();
+        b.alpha -= 0.015;
+        if (b.alpha <= 0) blips.splice(idx, 1);
+      });
+      ctx.shadowBlur = 0;
+
+      requestAnimationFrame(drawRadar);
+    }
+    drawRadar();
+
+    // --- State and Handlers ---
     let isScanning = false;
     let timerInterval = null;
     let currentInventory = { devices: [] };
+
+    function showToast(msg, icon = '📋') {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastMsg').textContent = msg;
+      document.getElementById('toastIcon').textContent = icon;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+
+    function copyText(txt) {
+      navigator.clipboard.writeText(txt).then(() => {
+        showToast(`Copiado: ${txt}`);
+      });
+    }
+
+    function toggleDownloadMenu() {
+      document.getElementById('downloadMenu').classList.toggle('show-dropdown');
+    }
+
+    window.onclick = function(e) {
+      if (!e.target.closest('.download-dropdown')) {
+        document.getElementById('downloadMenu').classList.remove('show-dropdown');
+      }
+    };
 
     async function loadAdapters() {
       try {
@@ -534,7 +964,7 @@
         adapters.forEach(a => {
           const opt = document.createElement('option');
           opt.value = a.name;
-          opt.textContent = `${a.name} (${a.is_up ? 'UP' : 'DOWN'}) - ${a.mac}`;
+          opt.textContent = `${a.name} (${a.is_up ? 'CARRIER UP' : 'DOWN'}) - MAC: ${a.mac}`;
           sel.appendChild(opt);
         });
         if (adapters.length > 0) {
@@ -548,20 +978,26 @@
     async function validateSelected() {
       const adapter = document.getElementById('adapterSelect').value;
       const remote = document.getElementById('remoteUrlInput').value;
-      const box = document.getElementById('validationBox');
-      const text = document.getElementById('validationText');
+      const card = document.getElementById('validationCard');
+      const sum = document.getElementById('valSummary');
+      const badges = document.getElementById('valBadges');
 
       try {
         const res = await fetch(`/api/validate?adapter=${encodeURIComponent(adapter)}&remote=${encodeURIComponent(remote)}`);
         const v = await res.json();
-        box.className = 'validation-box ' + (v.is_up ? 'ok' : 'error');
-        text.innerHTML = `<strong>${v.status_summary}</strong><br>
-          IP: ${v.ipv4_addresses ? v.ipv4_addresses.join(', ') : 'Ninguna'} |
-          Gateway: ${v.gateway || 'N/A'} (Alcanzable: ${v.gateway_alive ? 'Sí' : 'No'}) |
-          DNS: ${v.dns_resolving ? 'OK' : 'Fallo'} | TLS Seguro: ${v.secure_channel_ok ? 'OK' : 'Inactivo'}`;
+        card.className = 'validation-card ' + (v.is_up ? 'ok' : 'error');
+        sum.textContent = v.status_summary;
+
+        badges.innerHTML = `
+          <div class="v-badge"><span>🔌 Enlace Físico:</span> <strong>${v.is_up ? 'CONECTADO' : 'DESCONECTADO'}</strong></div>
+          <div class="v-badge"><span>🌐 IP:</span> <strong>${v.ipv4_addresses && v.ipv4_addresses.length ? v.ipv4_addresses.join(', ') : 'Sin IP (VLAN Aislada o sin DHCP)'}</strong></div>
+          <div class="v-badge"><span>🚪 Gateway:</span> <strong>${v.gateway || 'N/A'} (${v.gateway_alive ? 'Activo' : 'Inalcanzable'})</strong></div>
+          <div class="v-badge"><span>📡 DNS:</span> <strong>${v.dns_resolving ? 'Operativo' : 'Sin salida'}</strong></div>
+          <div class="v-badge"><span>🔒 Canal Seguro TLS:</span> <strong>${v.secure_channel_ok ? 'Conectado' : 'Sin conexión externa'}</strong></div>
+        `;
       } catch (err) {
-        box.className = 'validation-box error';
-        text.textContent = 'Error comprobando estado de punto de red.';
+        card.className = 'validation-card error';
+        sum.textContent = 'Error al verificar enlace de red.';
       }
     }
 
@@ -581,13 +1017,15 @@
       const container = document.getElementById('cardsView');
       const raw = document.getElementById('rawText');
       const count = document.getElementById('countDevices');
+      const topoFlow = document.getElementById('topoFlow');
       const devices = currentInventory.devices || [];
 
       count.textContent = devices.length;
       raw.value = JSON.stringify(currentInventory, null, 2);
 
       if (devices.length === 0) {
-        container.innerHTML = `<div class="empty-state">No hay switches registrados aún.<br>Inicie un escaneo para capturar anuncios CDP/LLDP del puerto.</div>`;
+        container.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 48px 16px; color: var(--muted); font-size: 13px;">No hay switches registrados aún.<br>Inicie un escaneo para escuchar anuncios del switch conectado.</div>`;
+        topoFlow.innerHTML = `<p style="color: var(--muted); font-size: 13px;">Realice un escaneo para mapear el switch y puerto conectado a este host.</p>`;
         return;
       }
 
@@ -598,19 +1036,19 @@
         card.innerHTML = `
           <div class="card-top">
             <div class="card-title">
-              <span>${escapeHtml(d.switch_name || 'Switch Desconocido')}</span>
+              <span onclick="copyText('${escapeHtml(d.switch_name || 'Desconocido')}')" title="Copiar nombre">${escapeHtml(d.switch_name || 'Switch Desconocido')}</span>
               <span class="badge-proto">${d.protocol}</span>
             </div>
-            ${d.vlan ? `<span class="badge-vlan">VLAN ${d.vlan}</span>` : ''}
+            ${d.vlan ? `<span class="badge-vlan">VLAN ${d.vlan}</span>` : '<span style="color: var(--muted); font-size: 11px;">VLAN Nativa</span>'}
           </div>
           <div class="card-details">
             <div class="detail-item">
               <span class="label">Puerto Switch</span>
-              <span class="value">${escapeHtml(d.port || '-')}</span>
+              <span class="value" onclick="copyText('${escapeHtml(d.port || '')}')" title="Copiar">${escapeHtml(d.port || '-')} 📋</span>
             </div>
             <div class="detail-item">
               <span class="label">IP de Gestión</span>
-              <span class="value">${escapeHtml(d.switch_ip || 'No anunciada')}</span>
+              <span class="value" onclick="copyText('${escapeHtml(d.switch_ip || '')}')" title="Copiar">${escapeHtml(d.switch_ip || 'No anunciada')} 📋</span>
             </div>
             <div class="detail-item">
               <span class="label">Modelo Hardware</span>
@@ -621,17 +1059,46 @@
               <span class="value">${escapeHtml(d.local_adapter || '-')}</span>
             </div>
             <div class="detail-item">
-              <span class="label">Detecciones Acumuladas</span>
-              <span class="value">${d.times_seen} vez/veces</span>
+              <span class="label">MAC / Chassis ID</span>
+              <span class="value" onclick="copyText('${escapeHtml(d.chassis_id || '')}')">${escapeHtml(d.chassis_id || '-')}</span>
             </div>
             <div class="detail-item">
-              <span class="label">Último Visto</span>
-              <span class="value">${new Date(d.last_seen).toLocaleTimeString()}</span>
+              <span class="label">Detecciones Acumuladas</span>
+              <span class="value" style="color: var(--cyan);">${d.times_seen} vez/veces</span>
             </div>
+          </div>
+          <div class="card-footer">
+            <span>Hora: ${new Date(d.last_seen).toLocaleTimeString()}</span>
+            <span>${d.port_description ? escapeHtml(d.port_description) : 'Sin descripción de puerto'}</span>
           </div>
         `;
         container.appendChild(card);
       });
+
+      // Update Topology Flow
+      if (devices.length > 0) {
+        const first = devices[0];
+        topoFlow.innerHTML = `
+          <div class="topo-node">
+            <span style="font-size: 11px; color: var(--muted); font-weight: 700;">MI COMPUTADOR</span>
+            <strong style="color: #fff; font-size: 14px;">${escapeHtml(first.local_adapter)}</strong>
+            <span style="font-size: 11px; color: var(--cyan); font-family: monospace;">${escapeHtml(first.local_mac)}</span>
+          </div>
+          <div class="topo-arrow">➔</div>
+          <div class="topo-node" style="border-color: var(--warning);">
+            <span style="font-size: 11px; color: var(--warning); font-weight: 700;">ROSETA / VLAN</span>
+            <strong style="color: #fff; font-size: 14px;">${first.vlan ? 'VLAN ' + first.vlan : 'Trunk / Native'}</strong>
+            <span style="font-size: 11px; color: var(--muted);">Punto de Red</span>
+          </div>
+          <div class="topo-arrow">➔</div>
+          <div class="topo-node" style="border-color: var(--cyan);">
+            <span style="font-size: 11px; color: var(--cyan); font-weight: 700;">SWITCH CONECTADO</span>
+            <strong style="color: #fff; font-size: 14px;">${escapeHtml(first.switch_name || 'Switch')}</strong>
+            <span style="font-size: 12px; color: var(--success); font-family: monospace;">Puerto: ${escapeHtml(first.port)}</span>
+            <span style="font-size: 11px; color: var(--muted);">${escapeHtml(first.model || '')}</span>
+          </div>
+        `;
+      }
     }
 
     async function toggleScan() {
@@ -644,8 +1111,9 @@
 
       isScanning = true;
       document.getElementById('startBtn').disabled = true;
-      document.getElementById('btnText').textContent = 'Escaneando...';
-      document.getElementById('appStatusText').textContent = 'Capturando';
+      document.getElementById('btnText').textContent = 'Escuchando tramas en el cable...';
+      document.getElementById('appStatusText').textContent = 'Escaneando';
+      document.getElementById('appStatus').classList.add('scanning');
       document.getElementById('progressContainer').style.display = 'flex';
 
       let elapsed = 0;
@@ -674,43 +1142,45 @@
         });
         const data = await res.json();
         if (data.error) {
-          alert("Error: " + data.error);
+          showToast(data.error, '⚠️');
         } else {
           currentInventory = data;
           renderDevices();
+          showToast(`¡Escaneo finalizado! ${data.devices ? data.devices.length : 0} switches`, '⚡');
         }
       } catch (err) {
-        alert("Fallo de comunicación: " + err.message);
+        showToast("Error de comunicación: " + err.message, '❌');
       } finally {
         clearInterval(timerInterval);
         isScanning = false;
         document.getElementById('startBtn').disabled = false;
-        document.getElementById('btnText').textContent = 'Iniciar Escaneo de Red';
+        document.getElementById('btnText').textContent = 'Iniciar Reconocimiento de Punto de Red';
         document.getElementById('appStatusText').textContent = 'Listo';
+        document.getElementById('appStatus').classList.remove('scanning');
         document.getElementById('progressContainer').style.display = 'none';
       }
     }
 
     function setTab(tab) {
       document.getElementById('tabCards').classList.toggle('active', tab === 'cards');
+      document.getElementById('tabTopology').classList.toggle('active', tab === 'topology');
       document.getElementById('tabText').classList.toggle('active', tab === 'text');
-      document.getElementById('cardsView').style.display = tab === 'cards' ? 'flex' : 'none';
-      document.getElementById('textView').style.display = tab === 'text' ? 'block' : 'none';
-    }
 
-    function exportReport(fmt) {
-      window.open(`/api/export?format=${fmt}`, '_blank');
+      document.getElementById('cardsView').style.display = tab === 'cards' ? 'grid' : 'none';
+      document.getElementById('topologyView').style.display = tab === 'topology' ? 'block' : 'none';
+      document.getElementById('textView').style.display = tab === 'text' ? 'block' : 'none';
     }
 
     async function clearResults() {
       if (confirm("¿Desea limpiar el inventario acumulado actual?")) {
         await fetch('/api/clear', { method: 'POST' });
         loadInventory();
+        showToast("Inventario reiniciado", '🗑️');
       }
     }
 
     function escapeHtml(str) {
-      return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+      return String(str || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
     }
 
     loadAdapters();
