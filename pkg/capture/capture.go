@@ -53,9 +53,13 @@ try {
     # 2. Inicializar nueva sesion ETW
     New-NetEventSession -Name $sn -LocalFilePath $etl -CaptureMode SaveToFile -ErrorAction Stop | Out-Null
 
-    # 3. Proveedor con filtros de multicast CDP y LLDP
+    # 3. Proveedor con filtros de multicast CDP y LLDP (soporte fisico y switch virtual Hyper-V/WSL)
     $llAddrs = @('01-80-C2-00-00-0E','01-80-C2-00-00-03','01-80-C2-00-00-00','01-00-0C-CC-CC-CC')
-    Add-NetEventPacketCaptureProvider -SessionName $sn -CaptureType Physical -TruncationLength 0 -LinkLayerAddress $llAddrs -ErrorAction Stop | Out-Null
+    try {
+        Add-NetEventPacketCaptureProvider -SessionName $sn -CaptureType BothPhysicalAndSwitch -TruncationLength 0 -LinkLayerAddress $llAddrs -ErrorAction Stop | Out-Null
+    } catch {
+        Add-NetEventPacketCaptureProvider -SessionName $sn -CaptureType Physical -TruncationLength 0 -LinkLayerAddress $llAddrs -ErrorAction Stop | Out-Null
+    }
 
     # 4. Seleccion y vinculacion robusta de interfaces (soporta dongles USB-C, docking y Ethernet)
     $targetAdapters = @()
@@ -71,7 +75,11 @@ try {
     }
 
     foreach ($ad in $targetAdapters) {
-        Add-NetEventNetworkAdapter -Name $ad.Name -PromiscuousMode $true -ErrorAction SilentlyContinue | Out-Null
+        try {
+            Add-NetEventNetworkAdapter -Name $ad.Name -PromiscuousMode $true -ErrorAction Stop | Out-Null
+        } catch {
+            Add-NetEventNetworkAdapter -Name $ad.Name -PromiscuousMode $false -ErrorAction SilentlyContinue | Out-Null
+        }
     }
 
     Start-NetEventSession -Name $sn -ErrorAction Stop | Out-Null
@@ -144,8 +152,8 @@ try {
 			res = protocol.ParseCDP(raw)
 		}
 
-		if res != nil && (res.SwitchName != "" || res.Port != "") {
-			key := fmt.Sprintf("%s/%s/%s", res.Protocol, res.SwitchName, res.Port)
+		if res != nil && (res.SwitchName != "" || res.Port != "" || res.ChassisID != "" || res.SourceMAC != "") {
+			key := fmt.Sprintf("%s/%s/%s", res.Protocol, res.SourceMAC, res.Port)
 			if !seenKeys[key] {
 				seenKeys[key] = true
 				results = append(results, *res)

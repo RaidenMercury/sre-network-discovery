@@ -46,40 +46,36 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG_NAME: ${{ github.ref_name }}
         run: |
-          cat << 'EOF' > release_notes.md
-          ## SRE Network Discovery v2.0.0
+          cat << EOF > release_notes.md
+          ## SRE Network Discovery \${TAG_NAME}
 
-          Reescritura completa en **Go**: motor ultraligero (~6 MB), libre de dependencias externas, interfaz gráfica moderna tipo glassmorphism y mitigación total de falsos positivos en Windows Defender.
+          Reescritura en **Go**: motor ultraligero (~6 MB), libre de dependencias externas, interfaz gráfica moderna tipo glassmorphism y mitigación total de falsos positivos en Windows Defender.
 
-          ### ✨ Novedades y Mejoras
+          ### ✨ Novedades y Correcciones en esta Versión
 
-          - **Captura Nativa ETW L2**: Captura continua de tramas de descubrimiento **CDP** (Cisco Discovery Protocol) y **LLDP** (Link Layer Discovery Protocol) con resiliencia basada en los patrones de `PSDiscoveryProtocol`.
-          - **Validación Integral de Punto de Red**:
-            - Verificación de enlace físico (Carrier Up / Down).
-            - Detección de IP asignada (IPv4 / IPv6).
-            - Sondeo activo de Gateway y ping ICMP/UDP.
-            - Validación de resolución DNS y canal seguro saliente TLS.
-          - **Interfaz Gráfica de Escritorio (GUI)**:
-            - Diseño moderno en tema oscuro con radar Canvas animado.
-            - Visualización de tarjetas de switch detectadas y mapa de flujo de topología física (Host -> Roseta/VLAN -> Switch/Puerto).
-            - Selector interactivo de adaptadores con botón de refresco y estilos de contraste optimizados.
-            - Menú desplegable para exportar inventario en **JSON**, **Markdown** y **CSV**.
-          - **Modo Daemon de Auto-Extracción (`--auto`)**:
-            - Monitoreo en tiempo real del cable de red: al enchufar el conector a una toma, valida la red y extrae automáticamente los datos del switch.
-          - **Modo Acumulativo (`-a` / `--append`)**:
-            - Acumula escaneos sucesivos sin sobreescribir el historial previo, deduplicando por Switch y Puerto.
-          - **Icono Oficial Integrado**:
-            - Icono vectorial original embebido directamente en el binario PE (`.rsrc`) con manifiesto UAC para ejecución con privilegios de administrador.
-          - **Corrección de Bugs**:
-            - Solucionado el bloqueo de inicialización de JavaScript (*Temporal Dead Zone* en `isScanning`) que impedía cargar los adaptadores en la interfaz web.
-            - Solucionado el pánico por contexto nulo en la resolución DNS (`probeDNS`).
+          - **Apertura Automática en Windows**: Al ejecutar la aplicación, ahora se abre automáticamente la ventana de interfaz de escritorio (usando Edge/Chrome en modo app sin bordes de navegador, o el navegador web predeterminado del sistema).
+          - **Privacidad y Limpieza de IPs**: Se eliminaron las direcciones IP fijas de desarrollo en los mensajes de inicio; la aplicación escucha de forma segura en \`127.0.0.1\` por defecto evitando bloqueos o alertas del firewall de Windows.
+          - **Soporte Completo para Switches Huawei y Multivendor (LLDP)**:
+            - Extracción inteligente del modelo de switch desde \`SystemDescription\` (ej. Serie \`Huawei S5720\`, \`CloudEngine\`, etc.) cuando la trama LLDP no incluye TLV de modelo propietario.
+            - Decodificación robusta de dirección IP de gestión en TLV 8 (IPv4 / IPv6).
+            - Detección de puerto desde TLV 2 y fallback a \`PortDescription\` (TLV 4).
+            - Extracción de VLAN de acceso/nativa (IEEE 802.1Q / PVID TLV 127).
+          - **Fusión Inteligente CDP + LLDP**:
+            - Si el switch conectado envía anuncios tanto en Cisco CDP como en estándar LLDP por el mismo puerto físico, la aplicación ahora los fusiona automáticamente en una única tarjeta completa con el distintivo \`CDP + LLDP\`, eliminando tarjetas duplicadas o campos vacíos.
+          - **Captura ETW Resiliente (\`BothPhysicalAndSwitch\`)**:
+            - Soporte para equipos con Hyper-V, WSL2, Docker o Virtual Switch habilitado mediante captura tanto en tarjetas físicas como en puentes virtuales.
+          - **Validación Integral de Red y Modos Acumulativo / Daemon**:
+            - Validación de enlace físico (Carrier Up/Down), IP DHCP, Gateway ping, DNS y canal seguro TLS.
+            - Modo daemon de auto-extracción (\`--auto\`) al enchufar cable Ethernet.
+            - Modo acumulativo (\`-a\` / \`--append\`) para inventarios progresivos de racks/rosetas.
+            - Exportación instantánea a **JSON**, **Markdown** y **CSV**.
 
           ### 📦 Instalación y Uso
 
-          1. Descarga el archivo `sre-network-discovery-v2.0.0-windows-x64.zip`.
+          1. Descarga el archivo \`sre-network-discovery-\${TAG_NAME}-windows-x64.zip\`.
           2. Descomprime en la carpeta de tu preferencia.
-          3. Haz doble clic en `sre-network-discovery.exe` o selecciona *"Ejecutar como Administrador"*.
-          4. Se abrirá la interfaz de escritorio lista para validar y escanear.
+          3. Haz doble clic en \`sre-network-discovery.exe\` (o clic derecho → *"Ejecutar como Administrador"*).
+          4. La aplicación abrirá automáticamente la interfaz de escritorio lista para escanear y validar.
           EOF
 
           gh release create "$TAG_NAME" \
@@ -87,3 +83,4 @@ jobs:
             dist/sre-network-discovery-${TAG_NAME}-linux-x64.tar.gz \
             --title "SRE Network Discovery $TAG_NAME" \
             --notes-file release_notes.md
+

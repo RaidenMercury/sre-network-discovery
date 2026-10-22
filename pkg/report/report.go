@@ -45,6 +45,61 @@ func NewInventory() *Inventory {
 	}
 }
 
+func normalizePort(p string) string {
+	s := strings.ToLower(strings.TrimSpace(p))
+	s = strings.ReplaceAll(s, "gigabitethernet", "ge")
+	s = strings.ReplaceAll(s, "fastethernet", "fe")
+	s = strings.ReplaceAll(s, "tengigabitethernet", "te")
+	s = strings.ReplaceAll(s, "twentyfivegigabitethernet", "25ge")
+	s = strings.ReplaceAll(s, "hundredgigabitethernet", "100ge")
+	s = strings.ReplaceAll(s, "fortygigabitethernet", "40ge")
+	s = strings.ReplaceAll(s, "gi", "ge")
+	s = strings.ReplaceAll(s, "fa", "fe")
+	s = strings.ReplaceAll(s, "eth", "e")
+	return s
+}
+
+func isSameDevice(dev *DeviceEntry, d *protocol.DiscoveryResult, adapter string) bool {
+	if adapter != "" && dev.LocalAdapter != "" && !strings.EqualFold(dev.LocalAdapter, adapter) {
+		return false
+	}
+
+	normDevPort := normalizePort(dev.Port)
+	normDPort := normalizePort(d.Port)
+
+	// 1. Mismo puerto normalizado
+	if normDevPort != "" && normDPort != "" && normDevPort == normDPort {
+		if dev.SwitchName != "" && d.SwitchName != "" && strings.EqualFold(dev.SwitchName, d.SwitchName) {
+			return true
+		}
+		if dev.SwitchIP != "" && d.SwitchIP != "" && dev.SwitchIP == d.SwitchIP {
+			return true
+		}
+		if dev.ChassisID != "" && d.ChassisID != "" && strings.EqualFold(dev.ChassisID, d.ChassisID) {
+			return true
+		}
+		if adapter != "" && dev.LocalAdapter != "" && strings.EqualFold(dev.LocalAdapter, adapter) {
+			return true
+		}
+	}
+
+	// 2. Mismo nombre de switch y coincidencia de puerto
+	if dev.SwitchName != "" && d.SwitchName != "" && strings.EqualFold(dev.SwitchName, d.SwitchName) {
+		if normDevPort == normDPort || dev.Port == d.Port {
+			return true
+		}
+	}
+
+	// 3. Mismo ChassisID
+	if dev.ChassisID != "" && d.ChassisID != "" && strings.EqualFold(dev.ChassisID, d.ChassisID) {
+		if normDevPort == normDPort {
+			return true
+		}
+	}
+
+	return false
+}
+
 func deviceKey(d *protocol.DiscoveryResult) string {
 	name := strings.TrimSpace(strings.ToUpper(d.SwitchName))
 	port := strings.TrimSpace(strings.ToLower(d.Port))
@@ -66,26 +121,51 @@ func (inv *Inventory) MergeDevice(d protocol.DiscoveryResult, adapter, mac strin
 	now := time.Now()
 
 	for i := range inv.Devices {
-		if inv.Devices[i].ID == key {
-			inv.Devices[i].LastSeen = now
-			inv.Devices[i].TimesSeen++
-			if d.SwitchIP != "" {
-				inv.Devices[i].SwitchIP = d.SwitchIP
+		dev := &inv.Devices[i]
+		if dev.ID == key || isSameDevice(dev, &d, adapter) {
+			dev.LastSeen = now
+			dev.TimesSeen++
+
+			// Unificar protocolos (CDP + LLDP)
+			if dev.Protocol != d.Protocol && !strings.Contains(dev.Protocol, d.Protocol) {
+				dev.Protocol = dev.Protocol + " + " + d.Protocol
+			}
+
+			// Conservar el mejor nombre de switch
+			if dev.SwitchName == "" || strings.HasPrefix(dev.SwitchName, "Switch (") {
+				if d.SwitchName != "" {
+					dev.SwitchName = d.SwitchName
+				}
+			}
+
+			if dev.SwitchIP == "" && d.SwitchIP != "" {
+				dev.SwitchIP = d.SwitchIP
 			}
 			if d.VLAN != 0 {
-				inv.Devices[i].VLAN = d.VLAN
+				dev.VLAN = d.VLAN
 			}
-			if d.Model != "" {
-				inv.Devices[i].Model = d.Model
+			if dev.Model == "" && d.Model != "" {
+				dev.Model = d.Model
 			}
-			if d.PortDescription != "" {
-				inv.Devices[i].PortDescription = d.PortDescription
+			// Preferir nombre de puerto más descriptivo
+			if len(d.Port) > len(dev.Port) {
+				dev.Port = d.Port
 			}
-			if d.SystemDescription != "" {
-				inv.Devices[i].SystemDescription = d.SystemDescription
+			if dev.PortDescription == "" && d.PortDescription != "" {
+				dev.PortDescription = d.PortDescription
 			}
-			inv.Devices[i].LocalAdapter = adapter
-			inv.Devices[i].LocalMAC = mac
+			if dev.SystemDescription == "" && d.SystemDescription != "" {
+				dev.SystemDescription = d.SystemDescription
+			}
+			if dev.ChassisID == "" && d.ChassisID != "" {
+				dev.ChassisID = d.ChassisID
+			}
+			if dev.LocalAdapter == "" {
+				dev.LocalAdapter = adapter
+			}
+			if dev.LocalMAC == "" {
+				dev.LocalMAC = mac
+			}
 			return
 		}
 	}

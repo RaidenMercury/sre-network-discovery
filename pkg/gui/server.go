@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -203,10 +204,10 @@ func Launch(ctx context.Context, inventoryFile string, host string, port int, op
 		}()
 	}
 
-	fmt.Printf("[+] Interfaz Gráfica activa y accesible en:\n")
-	fmt.Printf("    - Local:     http://localhost:%d\n", actualPort)
-	fmt.Printf("    - Tailscale: http://100.82.249.16:%d\n", actualPort)
-	fmt.Printf("    - LAN:       http://192.168.1.85:%d\n", actualPort)
+	fmt.Printf("[+] Interfaz Gráfica activa en: %s\n", url)
+	if host != "127.0.0.1" && host != "localhost" && host != "" {
+		fmt.Printf("    Escuchando en red (%s:%d)\n", host, actualPort)
+	}
 	if err := httpServer.Serve(listener); err != nil && err != http.ErrServerClosed {
 		return err
 	}
@@ -215,15 +216,35 @@ func Launch(ctx context.Context, inventoryFile string, host string, port int, op
 
 func openAppWindow(url string) {
 	if runtime.GOOS == "windows" {
-		edgePaths := []string{
+		localApp := os.Getenv("LOCALAPPDATA")
+		progFiles := os.Getenv("ProgramFiles")
+		progFilesX86 := os.Getenv("ProgramFiles(x86)")
+
+		candidates := []string{
+			progFilesX86 + `\Microsoft\Edge\Application\msedge.exe`,
+			progFiles + `\Microsoft\Edge\Application\msedge.exe`,
+			localApp + `\Microsoft\Edge\Application\msedge.exe`,
+			progFiles + `\Google\Chrome\Application\chrome.exe`,
+			progFilesX86 + `\Google\Chrome\Application\chrome.exe`,
+			localApp + `\Google\Chrome\Application\chrome.exe`,
 			`C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`,
 			`C:\Program Files\Microsoft\Edge\Application\msedge.exe`,
+			`C:\Program Files\Google\Chrome\Application\chrome.exe`,
+			`C:\Program Files (x86)\Google\Chrome\Application\chrome.exe`,
 		}
-		for _, p := range edgePaths {
-			cmd := exec.Command(p, fmt.Sprintf("--app=%s", url), "--window-size=680,880")
-			if err := cmd.Start(); err == nil {
-				return
+		for _, p := range candidates {
+			if p != "" {
+				if _, err := os.Stat(p); err == nil {
+					cmd := exec.Command(p, fmt.Sprintf("--app=%s", url), "--window-size=680,880")
+					if err := cmd.Start(); err == nil {
+						return
+					}
+				}
 			}
+		}
+		// Fallback estándar en Windows: abrir en navegador predeterminado
+		if err := exec.Command("cmd.exe", "/c", "start", "", url).Start(); err == nil {
+			return
 		}
 		_ = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
 	} else if runtime.GOOS == "linux" {

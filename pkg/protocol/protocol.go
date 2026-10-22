@@ -107,6 +107,7 @@ func ParseLLDP(data []byte) *DiscoveryResult {
 	res := &DiscoveryResult{
 		Protocol:  "LLDP",
 		SourceMAC: env.SrcMAC,
+		ChassisID: env.SrcMAC,
 		VLAN:      env.VLAN,
 	}
 
@@ -150,15 +151,21 @@ func ParseLLDP(data []byte) *DiscoveryResult {
 		case 6:
 			res.SystemDescription = sanitizeASCII(body)
 		case 8:
-			if len(body) >= 3 {
-				addrLen := int(body[0])
+			// Management Address TLV (IEEE 802.1AB 9.5.9)
+			// body[0] = Address length (k)
+			// body[1] = Subtype (1 = IPv4, 2 = IPv6)
+			// body[2...] = IP address octets
+			if len(body) >= 6 {
 				addrSubtype := int(body[1])
-				if addrLen >= 2 && 2+addrLen-1 <= len(body) {
-					addrBytes := body[2 : 2+addrLen-1]
-					if addrSubtype == 1 && len(addrBytes) == 4 {
-						mgmtAddrs = append(mgmtAddrs, net.IP(addrBytes).String())
-					} else if addrSubtype == 2 && len(addrBytes) == 16 {
-						mgmtAddrs = append(mgmtAddrs, net.IP(addrBytes).String())
+				if addrSubtype == 1 {
+					ip := net.IP(body[2:6])
+					if ip.To4() != nil && !ip.IsUnspecified() {
+						mgmtAddrs = append(mgmtAddrs, ip.String())
+					}
+				} else if addrSubtype == 2 && len(body) >= 18 {
+					ip := net.IP(body[2:18])
+					if !ip.IsUnspecified() {
+						mgmtAddrs = append(mgmtAddrs, ip.String())
 					}
 				}
 			}
@@ -167,6 +174,8 @@ func ParseLLDP(data []byte) *DiscoveryResult {
 				oui := fmt.Sprintf("%02X-%02X-%02X", body[0], body[1], body[2])
 				subtype := body[3]
 				if oui == "00-80-C2" && subtype == 1 && len(body) >= 6 {
+					res.VLAN = int(binary.BigEndian.Uint16(body[4:6]))
+				} else if oui == "00-80-C2" && subtype == 3 && len(body) >= 6 && res.VLAN == 0 {
 					res.VLAN = int(binary.BigEndian.Uint16(body[4:6]))
 				} else if oui == "00-12-BB" && subtype == 10 && len(body) > 4 {
 					res.Model = sanitizeASCII(body[4:])
@@ -185,7 +194,100 @@ func ParseLLDP(data []byte) *DiscoveryResult {
 		res.SwitchIP = mgmtAddrs[0]
 	}
 
+	// Normalizaciones y fallbacks inteligentes
+	if res.Port == "" && res.PortDescription != "" {
+		res.Port = res.PortDescription
+	} else if res.PortDescription == "" && res.Port != "" {
+		res.PortDescription = res.Port
+	}
+
+	if res.Model == "" && res.SystemDescription != "" {
+		res.Model = ExtractModelFromDescription(res.SystemDescription)
+	}
+
+	if res.SwitchName == "" {
+		if res.Model != "" {
+			res.SwitchName = res.Model
+		} else if res.SystemDescription != "" {
+			res.SwitchName = ExtractFirstLine(res.SystemDescription)
+		} else if res.ChassisID != "" {
+			res.SwitchName = fmt.Sprintf("Switch (%s)", res.ChassisID)
+		} else {
+			res.SwitchName = fmt.Sprintf("Switch (%s)", env.SrcMAC)
+		}
+	}
+
 	return res
+}
+
+// ExtractModelFromDescription extrae el modelo de hardware de la descripción del sistema
+func ExtractModelFromDescription(desc string) string {
+	desc = strings.TrimSpace(desc)
+	if desc == "" {
+		return ""
+	}
+
+	// Huawei VRP (e.g., "(S5720-28P-PWR-LI-AC V200R011C10SPC600)" o "Huawei ... S5720...")
+	if strings.Contains(strings.ToLower(desc), "huawei") || strings.Contains(desc, "VRP") {
+		if start := strings.Index(desc, "("); start != -1 {
+			if end := strings.Index(desc[start:], ")"); end != -1 {
+				inside := desc[start+1 : start+end]
+				parts := strings.Fields(inside)
+				if len(parts) > 0 && len(parts[0]) >= 4 {
+					return "Huawei " + parts[0]
+				}
+			}
+		}
+		for _, w := range strings.Fields(desc) {
+			wClean := strings.Trim(w, "(,;:)[]")
+			if strings.HasPrefix(wClean, "S5") || strings.HasPrefix(wClean, "S6") || strings.HasPrefix(wClean, "S7") || strings.HasPrefix(wClean, "CE") {
+				return "Huawei " + wClean
+			}
+		}
+		return "Huawei Switch"
+	}
+
+	// Cisco IOS
+	if strings.Contains(strings.ToLower(desc), "cisco") {
+		if start := strings.Index(desc, "("); start != -1 {
+			if end := strings.Index(desc[start:], ")"); end != -1 {
+				inside := desc[start+1 : start+end]
+				if strings.Contains(inside, "C29") || strings.Contains(inside, "C35") || strings.Contains(inside, "C38") || strings.Contains(inside, "C92") || strings.Contains(inside, "C93") || strings.Contains(inside, "CAT") {
+					return "Cisco " + inside
+				}
+			}
+		}
+		for _, w := range strings.Fields(desc) {
+			wClean := strings.Trim(w, "(,;:)[]")
+			if strings.HasPrefix(wClean, "C29") || strings.HasPrefix(wClean, "C35") || strings.HasPrefix(wClean, "C38") || strings.HasPrefix(wClean, "C92") || strings.HasPrefix(wClean, "C93") || strings.HasPrefix(wClean, "WS-C") {
+				return "Cisco " + wClean
+			}
+		}
+		return "Cisco Switch"
+	}
+
+	// HP / Aruba
+	if strings.Contains(strings.ToLower(desc), "aruba") || strings.Contains(strings.ToLower(desc), "procurve") || strings.Contains(strings.ToLower(desc), "hp ") {
+		lines := strings.Split(desc, "\n")
+		first := strings.TrimSpace(lines[0])
+		if len(first) > 40 {
+			first = first[:40]
+		}
+		return first
+	}
+
+	return ExtractFirstLine(desc)
+}
+
+// ExtractFirstLine devuelve la primera línea limpia de un texto
+func ExtractFirstLine(s string) string {
+	s = strings.TrimSpace(s)
+	lines := strings.Split(s, "\n")
+	first := strings.TrimSpace(lines[0])
+	if len(first) > 50 {
+		return first[:50] + "..."
+	}
+	return first
 }
 
 func ParseCDP(data []byte) *DiscoveryResult {

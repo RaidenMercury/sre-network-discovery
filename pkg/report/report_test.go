@@ -112,3 +112,59 @@ func TestInventorySaveAndLoad(t *testing.T) {
 	}
 }
 
+func TestInventoryMergeCDPAndLLDP(t *testing.T) {
+	inv := NewInventory()
+
+	// 1. CDP arrives first with full Cisco info
+	cdp := protocol.DiscoveryResult{
+		Protocol:   "CDP",
+		SwitchName: "SW-PISO2-DIST01",
+		SwitchIP:   "10.20.30.1",
+		Port:       "GigabitEthernet1/0/18",
+		Model:      "WS-C2960X-48FPS-L",
+		SourceMAC:  "00-11-22-33-44-55",
+	}
+
+	// 2. LLDP arrives on same port with VLAN info and Gi1/0/18
+	lldp := protocol.DiscoveryResult{
+		Protocol:   "LLDP",
+		SwitchName: "SW-PISO2-DIST01",
+		Port:       "Gi1/0/18",
+		VLAN:       40,
+		ChassisID:  "00-11-22-33-44-55",
+		SourceMAC:  "00-11-22-33-44-55",
+	}
+
+	inv.MergeDevice(cdp, "Ethernet", "18-66-DA-34-6B-78")
+	inv.MergeDevice(lldp, "Ethernet", "18-66-DA-34-6B-78")
+
+	// Must merge into a SINGLE enriched card, not 2 cards!
+	if len(inv.Devices) != 1 {
+		t.Fatalf("expected 1 unified device, got %d", len(inv.Devices))
+	}
+
+	dev := inv.Devices[0]
+	if dev.Protocol != "CDP + LLDP" {
+		t.Errorf("expected Protocol 'CDP + LLDP', got '%s'", dev.Protocol)
+	}
+	if dev.SwitchName != "SW-PISO2-DIST01" {
+		t.Errorf("expected SwitchName SW-PISO2-DIST01, got '%s'", dev.SwitchName)
+	}
+	if dev.Port != "GigabitEthernet1/0/18" {
+		t.Errorf("expected Port GigabitEthernet1/0/18, got '%s'", dev.Port)
+	}
+	if dev.VLAN != 40 {
+		t.Errorf("expected VLAN 40, got %d", dev.VLAN)
+	}
+	if dev.Model != "WS-C2960X-48FPS-L" {
+		t.Errorf("expected Model WS-C2960X-48FPS-L, got '%s'", dev.Model)
+	}
+	if dev.SwitchIP != "10.20.30.1" {
+		t.Errorf("expected SwitchIP 10.20.30.1, got '%s'", dev.SwitchIP)
+	}
+	if dev.TimesSeen != 2 {
+		t.Errorf("expected TimesSeen 2, got %d", dev.TimesSeen)
+	}
+}
+
+

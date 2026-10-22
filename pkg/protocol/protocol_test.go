@@ -129,3 +129,53 @@ func TestParseCDP(t *testing.T) {
 	}
 }
 
+func TestParseHuaweiLLDP(t *testing.T) {
+	packet := make([]byte, 200)
+	copy(packet[0:6], []byte{0x01, 0x80, 0xC2, 0x00, 0x00, 0x0E})
+	copy(packet[6:12], []byte{0x48, 0x46, 0xFB, 0x12, 0x34, 0x56})
+	binary.BigEndian.PutUint16(packet[12:14], 0x88CC)
+
+	offset := 14
+	putTLV := func(tlvType int, body []byte) {
+		hdr := uint16(tlvType<<9) | uint16(len(body)&0x01FF)
+		binary.BigEndian.PutUint16(packet[offset:offset+2], hdr)
+		offset += 2
+		copy(packet[offset:], body)
+		offset += len(body)
+	}
+
+	// Chassis ID
+	putTLV(1, append([]byte{4}, []byte{0x48, 0x46, 0xFB, 0x12, 0x34, 0x56}...))
+	// Port ID: Subtype 5 (GigabitEthernet0/0/18)
+	putTLV(2, append([]byte{5}, []byte("GigabitEthernet0/0/18")...))
+	// No System Name (TLV 5 is omitted to test fallback)
+	// System Description with Huawei VRP
+	putTLV(6, []byte("Huawei Versatile Routing Platform Software. VRP (R) software, Version 5.170 (S5720-28P-PWR-LI-AC V200R011C10SPC600)"))
+	// Management Address (TLV 8)
+	// Subtype 1 (IPv4), IP: 10.50.1.254
+	putTLV(8, []byte{5, 1, 10, 50, 1, 254, 1, 0, 0, 0, 0})
+	// Org Specific (TLV 127) - Port VLAN ID: 150
+	putTLV(127, []byte{0x00, 0x80, 0xC2, 1, 0, 150})
+
+	res := ParseLLDP(packet[:offset])
+	if res == nil {
+		t.Fatal("expected non-nil LLDP result for Huawei frame")
+	}
+	if res.Port != "GigabitEthernet0/0/18" {
+		t.Errorf("expected Port GigabitEthernet0/0/18, got %s", res.Port)
+	}
+	if res.Model != "Huawei S5720-28P-PWR-LI-AC" {
+		t.Errorf("expected Model Huawei S5720-28P-PWR-LI-AC, got %s", res.Model)
+	}
+	if res.SwitchName != "Huawei S5720-28P-PWR-LI-AC" {
+		t.Errorf("expected fallback SwitchName Huawei S5720-28P-PWR-LI-AC, got %s", res.SwitchName)
+	}
+	if res.SwitchIP != "10.50.1.254" {
+		t.Errorf("expected SwitchIP 10.50.1.254, got %s", res.SwitchIP)
+	}
+	if res.VLAN != 150 {
+		t.Errorf("expected VLAN 150, got %d", res.VLAN)
+	}
+}
+
+

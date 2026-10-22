@@ -740,7 +740,7 @@
     <div class="brand">
       <img src="/logo.png" alt="SRE Logo" style="width: 38px; height: 38px; border-radius: 10px; box-shadow: 0 0 20px var(--accent-glow); object-fit: contain;">
       <div class="brand-text">
-        <h1>SRE Network Discovery <span class="version-tag">PRO v2.0</span></h1>
+        <h1>SRE Network Discovery <span class="version-tag">PRO v2.0.1</span></h1>
         <p>Switch Reconnaissance & Link Topology Engine</p>
       </div>
     </div>
@@ -1066,15 +1066,15 @@
         card.innerHTML = `
           <div class="card-top">
             <div class="card-title">
-              <span onclick="copyText('${escapeHtml(d.switch_name || 'Desconocido')}')" title="Copiar nombre">${escapeHtml(d.switch_name || 'Switch Desconocido')}</span>
+              <span onclick="copyText('${escapeHtml(d.switch_name || 'Switch Desconocido')}')" title="Copiar nombre">${escapeHtml(d.switch_name || 'Switch Desconocido')}</span>
               <span class="badge-proto">${d.protocol}</span>
             </div>
-            ${d.vlan ? `<span class="badge-vlan">VLAN ${d.vlan}</span>` : '<span style="color: var(--muted); font-size: 11px;">VLAN Nativa</span>'}
+            ${d.vlan ? `<span class="badge-vlan">VLAN ${d.vlan}</span>` : '<span style="color: var(--muted); font-size: 11px;">VLAN Nativa / No anunciada</span>'}
           </div>
           <div class="card-details">
             <div class="detail-item">
               <span class="label">Puerto Switch</span>
-              <span class="value" onclick="copyText('${escapeHtml(d.port || '')}')" title="Copiar">${escapeHtml(d.port || '-')} 📋</span>
+              <span class="value" onclick="copyText('${escapeHtml(d.port || d.port_description || '')}')" title="Copiar">${escapeHtml(d.port || d.port_description || '-')} 📋</span>
             </div>
             <div class="detail-item">
               <span class="label">IP de Gestión</span>
@@ -1082,7 +1082,7 @@
             </div>
             <div class="detail-item">
               <span class="label">Modelo Hardware</span>
-              <span class="value">${escapeHtml(d.model || '-')}</span>
+              <span class="value">${escapeHtml(d.model || d.system_description || '-')}</span>
             </div>
             <div class="detail-item">
               <span class="label">Adaptador Local</span>
