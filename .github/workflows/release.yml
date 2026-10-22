@@ -1,0 +1,89 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and Publish Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: false
+
+      - name: Install packaging tools
+        run: sudo apt-get update && sudo apt-get install -y zip
+
+      - name: Build Binaries
+        run: |
+          mkdir -p dist
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o dist/sre-network-discovery.exe ./cmd/sre-discovery
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o dist/sre-discovery-linux ./cmd/sre-discovery
+
+      - name: Create Release Packages
+        run: |
+          cd dist
+          cp ../README.md .
+          cp ../icono.ico .
+          cp ../icono.svg .
+          zip -9 sre-network-discovery-${{ github.ref_name }}-windows-x64.zip sre-network-discovery.exe README.md icono.ico
+          tar -czvf sre-network-discovery-${{ github.ref_name }}-linux-x64.tar.gz sre-discovery-linux README.md icono.svg
+          cd ..
+
+      - name: Publish GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          cat << 'EOF' > release_notes.md
+          ## SRE Network Discovery v2.0.0
+
+          Reescritura completa en **Go**: motor ultraligero (~6 MB), libre de dependencias externas, interfaz gráfica moderna tipo glassmorphism y mitigación total de falsos positivos en Windows Defender.
+
+          ### ✨ Novedades y Mejoras
+
+          - **Captura Nativa ETW L2**: Captura continua de tramas de descubrimiento **CDP** (Cisco Discovery Protocol) y **LLDP** (Link Layer Discovery Protocol) con resiliencia basada en los patrones de `PSDiscoveryProtocol`.
+          - **Validación Integral de Punto de Red**:
+            - Verificación de enlace físico (Carrier Up / Down).
+            - Detección de IP asignada (IPv4 / IPv6).
+            - Sondeo activo de Gateway y ping ICMP/UDP.
+            - Validación de resolución DNS y canal seguro saliente TLS.
+          - **Interfaz Gráfica de Escritorio (GUI)**:
+            - Diseño moderno en tema oscuro con radar Canvas animado.
+            - Visualización de tarjetas de switch detectadas y mapa de flujo de topología física (Host -> Roseta/VLAN -> Switch/Puerto).
+            - Selector interactivo de adaptadores con botón de refresco y estilos de contraste optimizados.
+            - Menú desplegable para exportar inventario en **JSON**, **Markdown** y **CSV**.
+          - **Modo Daemon de Auto-Extracción (`--auto`)**:
+            - Monitoreo en tiempo real del cable de red: al enchufar el conector a una toma, valida la red y extrae automáticamente los datos del switch.
+          - **Modo Acumulativo (`-a` / `--append`)**:
+            - Acumula escaneos sucesivos sin sobreescribir el historial previo, deduplicando por Switch y Puerto.
+          - **Icono Oficial Integrado**:
+            - Icono vectorial original embebido directamente en el binario PE (`.rsrc`) con manifiesto UAC para ejecución con privilegios de administrador.
+          - **Corrección de Bugs**:
+            - Solucionado el bloqueo de inicialización de JavaScript (*Temporal Dead Zone* en `isScanning`) que impedía cargar los adaptadores en la interfaz web.
+            - Solucionado el pánico por contexto nulo en la resolución DNS (`probeDNS`).
+
+          ### 📦 Instalación y Uso
+
+          1. Descarga el archivo `sre-network-discovery-v2.0.0-windows-x64.zip`.
+          2. Descomprime en la carpeta de tu preferencia.
+          3. Haz doble clic en `sre-network-discovery.exe` o selecciona *"Ejecutar como Administrador"*.
+          4. Se abrirá la interfaz de escritorio lista para validar y escanear.
+          EOF
+
+          gh release create "$TAG_NAME" \
+            dist/sre-network-discovery-${TAG_NAME}-windows-x64.zip \
+            dist/sre-network-discovery-${TAG_NAME}-linux-x64.tar.gz \
+            --title "SRE Network Discovery $TAG_NAME" \
+            --notes-file release_notes.md
