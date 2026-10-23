@@ -1,32 +1,36 @@
-# SRE Network Discovery v2.0
+<p align="center">
+  <img src="assets/banner.svg" alt="SRE Network Discovery Banner" width="100%">
+</p>
+
+# SRE Network Discovery v2.0.2
 
 Herramienta de grado SRE para **descubrimiento de infraestructura de red (CDP/LLDP)** y **validación de puntos de conexión de red** en Windows.
 
-Compilada de forma nativa en **Go**: ejecutable único, ultraligero (~5 MB), sin dependencias externas, sin intérpretes en `%TEMP%` y libre de falsos positivos en Windows Defender / EDR.
+Compilada de forma nativa en **Go**: ejecutable único, ultraligero (~6 MB), sin dependencias externas, sin intérpretes en `%TEMP%` y libre de falsos positivos en Windows Defender / EDR.
 
 ---
 
 ## Características Principales
 
-- **Captura Nativa L2 (CDP / LLDP)**: Captura anuncios de switches Cisco y multivendor (Cisco Discovery Protocol y Link Layer Discovery Protocol) mediante el subsistema del kernel **ETW (Event Tracing for Windows)** sin necesidad de Wireshark ni WinPcap.
+- **Captura Nativa L2 (CDP / LLDP)**: Captura anuncios de switches Cisco, Huawei y multivendor (Cisco Discovery Protocol y Link Layer Discovery Protocol) mediante el subsistema del kernel **ETW (Event Tracing for Windows)** sin necesidad de Wireshark ni WinPcap.
 - **Validación de Punto de Conexión de Red**:
   - Estado del enlace físico (Carrier Up/Down).
   - Inspección de direccionamiento IP asignado (IPv4 / IPv6).
   - Detección y sondeo de puerta de enlace (Gateway).
   - Prueba de resolución DNS y canal seguro TLS.
-- **Modo Extracción Automática (`--auto`)**:
-  - Monitoriza en tiempo real la conexión del cable de red.
-  - Al conectarse a una toma o switch, valida el canal seguro, ejecuta la extracción del switch/puerto y lo añade al inventario.
+- **Modo Auto-Extracción de datos (`--auto`)**:
+  - Activado por defecto en la interfaz gráfica.
+  - Monitoriza en tiempo real la conexión del cable de red: al enchufar el conector a una toma, valida la red y extrae automáticamente los datos del switch.
   - Ideal para técnicos recorriendo racks o rosetas de red.
 - **Modo Acumulativo (`-a` / `--append`)**:
   - Permite ir sumando escaneos sucesivos al inventario principal sin perder el historial.
-  - Deduplica automáticamente por Switch y Puerto, actualizando última hora vista y contador de detecciones.
+  - Deduplica automáticamente por Switch y Puerto, unificando tramas simultáneas de CDP y LLDP en una sola tarjeta enriquecida.
 - **Auditoría Clara y Modular**:
   - Código desacoplado en paquetes limpios y auditables (`pkg/link`, `pkg/protocol`, `pkg/capture`, `pkg/engine`, `pkg/report`).
   - Sin anotaciones redundantes ni dependencias infladas.
 - **Exportación Múltiple**:
+  - Reporte en Markdown formateado en cápsulas amigables para correos de Outlook (`sre_network_inventory.md`).
   - JSON estructurado (`sre_network_inventory.json`).
-  - Reporte en Markdown formateado con tablas (`sre_network_inventory.md`).
   - Hoja de cálculo CSV (`sre_network_inventory.csv`).
   - Soporte de envío cifrado HTTPS (`--remote https://...`).
 

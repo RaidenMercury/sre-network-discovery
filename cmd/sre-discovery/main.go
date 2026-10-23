@@ -17,7 +17,7 @@ import (
 
 const (
 	AppName    = "SRE Network Discovery"
-	AppVersion = "2.0.1"
+	AppVersion = "2.0.2"
 )
 
 func printBanner() {
