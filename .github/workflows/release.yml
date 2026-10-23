@@ -49,26 +49,26 @@ jobs:
           cat << EOF > release_notes.md
           ## SRE Network Discovery \${TAG_NAME}
 
-          Reescritura en **Go**: motor ultraligero (~6 MB), libre de dependencias externas, interfaz gráfica moderna tipo glassmorphism y mitigación total de falsos positivos en Windows Defender.
+          Esta versión incluye importantes mejoras operativas, un nuevo formato de exportación diseñado para correos corporativos, detección automática manos libres de cables de red y optimizaciones de compatibilidad con switches Huawei y Cisco.
 
-          ### ✨ Novedades y Correcciones en esta Versión
+          ### 🚀 Novedades y Correcciones Principales
 
-          - **Apertura Automática en Windows**: Al ejecutar la aplicación, ahora se abre automáticamente la ventana de interfaz de escritorio (usando Edge/Chrome en modo app sin bordes de navegador, o el navegador web predeterminado del sistema).
-          - **Privacidad y Limpieza de IPs**: Se eliminaron las direcciones IP fijas de desarrollo en los mensajes de inicio; la aplicación escucha de forma segura en \`127.0.0.1\` por defecto evitando bloqueos o alertas del firewall de Windows.
-          - **Soporte Completo para Switches Huawei y Multivendor (LLDP)**:
-            - Extracción inteligente del modelo de switch desde \`SystemDescription\` (ej. Serie \`Huawei S5720\`, \`CloudEngine\`, etc.) cuando la trama LLDP no incluye TLV de modelo propietario.
-            - Decodificación robusta de dirección IP de gestión en TLV 8 (IPv4 / IPv6).
-            - Detección de puerto desde TLV 2 y fallback a \`PortDescription\` (TLV 4).
-            - Extracción de VLAN de acceso/nativa (IEEE 802.1Q / PVID TLV 127).
+          - **Nuevo Formato de Exportación Markdown en "Cápsula" (Compatible con Outlook)**:
+            - Se sustituyeron las tablas Markdown por un listado en cápsulas individuales con viñetas por punto de red, listo para copiar y pegar en correos de Outlook sin desbordamiento ni errores de formato.
+          - **Auto-Extracción de datos Predeterminada (Hands-Free)**:
+            - Renombrado y activado (\`checked\`) por defecto en la interfaz gráfica.
+            - Monitoreo reactivo del enlace: al conectar el cable a una roseta o switch, valida los parámetros y ejecuta la extracción automáticamente.
           - **Fusión Inteligente CDP + LLDP**:
-            - Si el switch conectado envía anuncios tanto en Cisco CDP como en estándar LLDP por el mismo puerto físico, la aplicación ahora los fusiona automáticamente en una única tarjeta completa con el distintivo \`CDP + LLDP\`, eliminando tarjetas duplicadas o campos vacíos.
-          - **Captura ETW Resiliente (\`BothPhysicalAndSwitch\`)**:
-            - Soporte para equipos con Hyper-V, WSL2, Docker o Virtual Switch habilitado mediante captura tanto en tarjetas físicas como en puentes virtuales.
-          - **Validación Integral de Red y Modos Acumulativo / Daemon**:
-            - Validación de enlace físico (Carrier Up/Down), IP DHCP, Gateway ping, DNS y canal seguro TLS.
-            - Modo daemon de auto-extracción (\`--auto\`) al enchufar cable Ethernet.
-            - Modo acumulativo (\`-a\` / \`--append\`) para inventarios progresivos de racks/rosetas.
-            - Exportación instantánea a **JSON**, **Markdown** y **CSV**.
+            - Unificación de tramas simultáneas en una única tarjeta completa con el distintivo \`CDP + LLDP\`, eliminando tarjetas duplicadas o campos vacíos.
+          - **Soporte Completo para Switches Huawei (LLDP)**:
+            - Decodificación del modelo de hardware y sistema operativo desde el campo \`SystemDescription\` para switches Huawei VRP.
+            - Extracción robusta de IP de gestión en TLV 8 (IPv4 / IPv6) y de nombres de puerto en \`PortDescription\`.
+          - **Privacidad de Red y Apertura Automática**:
+            - Apertura automática de ventana de aplicación o navegador en Windows.
+            - Enlace seguro en \`127.0.0.1\` por defecto evitando bloqueos o alertas del Firewall de Windows.
+          - **Banner Animado y Saneamiento del Repositorio**:
+            - Cabecera SVG animada integrada en el proyecto.
+            - Eliminación de archivos internos de agentes (\`AGENTS.md\`, etc.) del repositorio.
 
           ### 📦 Instalación y Uso
 
