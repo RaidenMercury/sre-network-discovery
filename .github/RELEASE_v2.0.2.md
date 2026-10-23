@@ -55,3 +55,4 @@ Esta versión incluye importantes mejoras operativas, un nuevo formato de export
 2. Haz doble clic en `sre-network-discovery.exe` (o *Clic derecho → Ejecutar como Administrador*).
 3. Se abrirá automáticamente la ventana de la aplicación.
 4. Con **Auto-Extracción de datos** activo, conecta el cable de red al puerto que deseas auditar para comenzar la captura de forma automática.
+
