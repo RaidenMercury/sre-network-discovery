@@ -54,7 +54,12 @@ sre-network-discovery/
 ├── go.mod
 └── README.md
 ```
-
+---
+## Capturas de pantalla de testeos genericos
+![Captura](assets/Imagen-test1.jpg)
+![Captura](assets/Imagen-Test-Tarjetas%20(1).png)
+![Captura](assets/Imagen-Test-Tarjetas%20(2).png)
+![Captura](assets/Imagen-Test-Tarjetas%20(3).png)
 ---
 
 ## Uso en Windows
