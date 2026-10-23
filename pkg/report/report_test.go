@@ -3,6 +3,7 @@ package report
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/RaidenMercury/sre-network-discovery/pkg/protocol"
@@ -95,6 +96,20 @@ func TestInventorySaveAndLoad(t *testing.T) {
 	}
 	if err := inv.SaveMarkdown(mdPath); err != nil {
 		t.Fatalf("failed to save Markdown: %v", err)
+	}
+	mdBytes, err := os.ReadFile(mdPath)
+	if err != nil {
+		t.Fatalf("failed to read generated Markdown: %v", err)
+	}
+	mdContent := string(mdBytes)
+	if !strings.Contains(mdContent, "Punto de red n°1:") {
+		t.Errorf("expected 'Punto de red n°1:' in markdown, got:\n%s", mdContent)
+	}
+	if !strings.Contains(mdContent, "- Switch Name: CORE-01") {
+		t.Errorf("expected '- Switch Name: CORE-01' in markdown, got:\n%s", mdContent)
+	}
+	if !strings.Contains(mdContent, "- Adaptador local: Eth0") {
+		t.Errorf("expected '- Adaptador local: Eth0' in markdown, got:\n%s", mdContent)
 	}
 	if err := inv.SaveCSV(csvPath); err != nil {
 		t.Fatalf("failed to save CSV: %v", err)

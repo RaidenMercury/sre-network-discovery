@@ -778,9 +778,9 @@
           </label>
         </div>
         <div class="toggle-card">
-          <span>Auto-Extracción al Enchufar</span>
+          <span>Auto-Extracción de datos</span>
           <label class="switch">
-            <input type="checkbox" id="autoToggle">
+            <input type="checkbox" id="autoToggle" checked>
             <span class="slider"></span>
           </label>
         </div>
@@ -1217,8 +1217,44 @@
       return String(str || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
     }
 
+    let lastCarrierUp = null;
+    let autoMonitorInterval = null;
+
+    function startAutoMonitor() {
+      if (autoMonitorInterval) clearInterval(autoMonitorInterval);
+      autoMonitorInterval = setInterval(async () => {
+        const autoEnabled = document.getElementById('autoToggle')?.checked;
+        if (!autoEnabled || isScanning) return;
+
+        const sel = document.getElementById('adapterSelect');
+        const adapter = sel ? sel.value : '';
+        if (!adapter) return;
+
+        try {
+          const res = await fetch(`/api/validate?adapter=${encodeURIComponent(adapter)}`);
+          if (!res.ok) return;
+          const v = await res.json();
+
+          if (lastCarrierUp === false && v.is_up === true) {
+            showToast("🔌 Cable conectado. Ejecutando Auto-Extracción de datos...", "⚡");
+            validateSelected();
+            setTimeout(() => {
+              if (!isScanning) toggleScan();
+            }, 1000);
+          } else if (lastCarrierUp === true && v.is_up === false) {
+            showToast("🔌 Cable desconectado. Esperando siguiente puerto...", "ℹ️");
+            validateSelected();
+          }
+          lastCarrierUp = v.is_up;
+        } catch (e) {
+          // ignore background polling error
+        }
+      }, 3000);
+    }
+
     loadAdapters();
     loadInventory();
+    startAutoMonitor();
   </script>
 </body>
 </html>

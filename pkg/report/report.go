@@ -237,29 +237,56 @@ func (inv *Inventory) SaveMarkdown(path string) error {
 	}
 
 	var sb strings.Builder
-	sb.WriteString("# SRE Network Discovery - Cumulative Inventory Report\n\n")
+	sb.WriteString("# Reporte de Descubrimiento de Red (SRE)\n\n")
 	sb.WriteString(fmt.Sprintf("**Fecha del reporte:** %s  \n", inv.GeneratedAt.Format("2006-01-02 15:04:05")))
 	sb.WriteString(fmt.Sprintf("**Total escaneos acumulados:** %d  \n", inv.TotalScans))
-	sb.WriteString(fmt.Sprintf("**Dispositivos únicos detectados:** %d  \n\n", len(inv.Devices)))
+	sb.WriteString(fmt.Sprintf("**Total puntos de red descubiertos:** %d  \n\n", len(inv.Devices)))
+	sb.WriteString("---\n\n")
 
-	sb.WriteString("| Switch Name | IP Gestión | Puerto Switch | VLAN | Modelo | Protocolo | Adaptador Local | Detecciones | Última Vez |\n")
-	sb.WriteString("|:---|:---|:---|:---|:---|:---|:---|:---|:---|\n")
+	if len(inv.Devices) == 0 {
+		sb.WriteString("*(No se registraron dispositivos ni puntos de red en este reporte)*\n")
+	}
 
-	for _, d := range inv.Devices {
-		vlanStr := "-"
+	for i, d := range inv.Devices {
+		vlanStr := "VLAN Nativa / No anunciada"
 		if d.VLAN != 0 {
-			vlanStr = strconv.Itoa(d.VLAN)
+			vlanStr = fmt.Sprintf("VLAN %d", d.VLAN)
 		}
 		ipStr := d.SwitchIP
 		if ipStr == "" {
-			ipStr = "-"
+			ipStr = "No anunciada"
 		}
 		modelStr := d.Model
 		if modelStr == "" {
-			modelStr = "-"
+			if d.SystemDescription != "" {
+				modelStr = d.SystemDescription
+			} else {
+				modelStr = "-"
+			}
 		}
-		sb.WriteString(fmt.Sprintf("| **%s** | `%s` | `%s` | %s | %s | %s | %s | %d | %s |\n",
-			d.SwitchName, ipStr, d.Port, vlanStr, modelStr, d.Protocol, d.LocalAdapter, d.TimesSeen, d.LastSeen.Format("15:04:05")))
+		adapterStr := d.LocalAdapter
+		if adapterStr == "" {
+			adapterStr = "-"
+		}
+		portStr := d.Port
+		if portStr == "" {
+			if d.PortDescription != "" {
+				portStr = d.PortDescription
+			} else {
+				portStr = "-"
+			}
+		}
+
+		sb.WriteString(fmt.Sprintf("Punto de red n°%d:\n", i+1))
+		sb.WriteString(fmt.Sprintf(" - Adaptador local: %s\n", adapterStr))
+		sb.WriteString(fmt.Sprintf(" - Switch Name: %s\n", d.SwitchName))
+		sb.WriteString(fmt.Sprintf(" - IP Gestion: %s\n", ipStr))
+		sb.WriteString(fmt.Sprintf(" - Puerto Switch: %s\n", portStr))
+		sb.WriteString(fmt.Sprintf(" - VLAN: %s\n", vlanStr))
+		sb.WriteString(fmt.Sprintf(" - Modelo: %s\n", modelStr))
+		sb.WriteString(fmt.Sprintf(" - Protocolo: %s\n", d.Protocol))
+		sb.WriteString(fmt.Sprintf(" - Detecciones: %d\n", d.TimesSeen))
+		sb.WriteString(fmt.Sprintf(" - Ultima Vez: %s\n\n", d.LastSeen.Format("15:04:05")))
 	}
 
 	return os.WriteFile(path, []byte(sb.String()), 0644)

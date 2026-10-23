@@ -71,7 +71,7 @@ Se abrirá la ventana con:
 - Panel de validación de punto de red (Carrier, IP, Gateway, DNS, TLS).
 - Barra de progreso interactiva durante la captura.
 - Vista de tarjetas modernas para cada switch detectado y vista de texto plano.
-- Switches para alternar Modo Acumulativo (`-a`) y Modo Auto-Extracción al enchufar cable.
+- Switches para alternar Modo Acumulativo (`-a`) y Modo Auto-Extracción de datos.
 - Botones de exportación instantánea a JSON, Markdown y CSV.
 
 ### 2. Modo Consola (CLI Headless)

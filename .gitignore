@@ -35,6 +35,8 @@ Thumbs.db
 # AI & Agent artifacts
 .agents/
 .gemini/
-GEMINI.md
 AGENTS.md
+SKILL.md
+GEMINI.md
+*.agent.md
 graphify-out/
