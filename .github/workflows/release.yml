@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - 'v*'
+    branches:
+      - 'release-publish'
 
 permissions:
   contents: write
@@ -15,6 +17,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -33,19 +37,27 @@ jobs:
 
       - name: Create Release Packages
         run: |
+          TAG_NAME="${{ github.ref_name }}"
+          if [ "$TAG_NAME" = "release-publish" ]; then
+            TAG_NAME="v2.1.0"
+          fi
           cd dist
           cp ../README.md .
           cp ../icono.ico .
           cp ../icono.svg .
-          zip -9 sre-network-discovery-${{ github.ref_name }}-windows-x64.zip sre-network-discovery.exe README.md icono.ico
-          tar -czvf sre-network-discovery-${{ github.ref_name }}-linux-x64.tar.gz sre-discovery-linux README.md icono.svg
+          zip -9 sre-network-discovery-${TAG_NAME}-windows-x64.zip sre-network-discovery.exe README.md icono.ico
+          tar -czvf sre-network-discovery-${TAG_NAME}-linux-x64.tar.gz sre-discovery-linux README.md icono.svg
           cd ..
 
       - name: Publish GitHub Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG_NAME: ${{ github.ref_name }}
         run: |
+          TAG_NAME="${{ github.ref_name }}"
+          if [ "$TAG_NAME" = "release-publish" ]; then
+            TAG_NAME="v2.1.0"
+          fi
+
           if [ -f ".github/RELEASE_${TAG_NAME}.md" ]; then
             NOTES_FILE=".github/RELEASE_${TAG_NAME}.md"
           else
@@ -57,21 +69,12 @@ jobs:
           EOF
           fi
 
-          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
-            echo "Release $TAG_NAME exists. Ensuring published status and updating notes/assets..."
-            gh release edit "$TAG_NAME" \
-              --draft=false \
-              --title "SRE Network Discovery $TAG_NAME" \
-              --notes-file "$NOTES_FILE"
-            gh release upload "$TAG_NAME" \
-              dist/sre-network-discovery-${TAG_NAME}-windows-x64.zip \
-              dist/sre-network-discovery-${TAG_NAME}-linux-x64.tar.gz \
-              --clobber
-          else
-            echo "Creating new release $TAG_NAME..."
-            gh release create "$TAG_NAME" \
-              dist/sre-network-discovery-${TAG_NAME}-windows-x64.zip \
-              dist/sre-network-discovery-${TAG_NAME}-linux-x64.tar.gz \
-              --title "SRE Network Discovery $TAG_NAME" \
-              --notes-file "$NOTES_FILE"
-          fi
+          echo "Deleting previous release draft if any for $TAG_NAME..."
+          gh release delete "$TAG_NAME" --yes || true
+
+          echo "Creating fresh public release for $TAG_NAME..."
+          gh release create "$TAG_NAME" \
+            dist/sre-network-discovery-${TAG_NAME}-windows-x64.zip \
+            dist/sre-network-discovery-${TAG_NAME}-linux-x64.tar.gz \
+            --title "SRE Network Discovery $TAG_NAME" \
+            --notes-file "$NOTES_FILE"
