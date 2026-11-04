@@ -58,8 +58,9 @@ jobs:
           fi
 
           if gh release view "$TAG_NAME" >/dev/null 2>&1; then
-            echo "Release $TAG_NAME exists. Updating release notes and assets..."
+            echo "Release $TAG_NAME exists. Ensuring published status and updating notes/assets..."
             gh release edit "$TAG_NAME" \
+              --draft=false \
               --title "SRE Network Discovery $TAG_NAME" \
               --notes-file "$NOTES_FILE"
             gh release upload "$TAG_NAME" \
