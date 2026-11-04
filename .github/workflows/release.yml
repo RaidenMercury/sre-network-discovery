@@ -28,7 +28,7 @@ jobs:
       - name: Build Binaries
         run: |
           mkdir -p dist
-          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o dist/sre-network-discovery.exe ./cmd/sre-discovery
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w -H=windowsgui" -o dist/sre-network-discovery.exe ./cmd/sre-discovery
           GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o dist/sre-discovery-linux ./cmd/sre-discovery
 
       - name: Create Release Packages
@@ -46,41 +46,31 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG_NAME: ${{ github.ref_name }}
         run: |
-          cat << EOF > release_notes.md
-          ## SRE Network Discovery \${TAG_NAME}
+          if [ -f ".github/RELEASE_${TAG_NAME}.md" ]; then
+            NOTES_FILE=".github/RELEASE_${TAG_NAME}.md"
+          else
+            NOTES_FILE="release_notes.md"
+            cat << EOF > release_notes.md
+          ## SRE Network Discovery ${TAG_NAME}
 
-          Esta versión incluye importantes mejoras operativas, un nuevo formato de exportación diseñado para correos corporativos, detección automática manos libres de cables de red y optimizaciones de compatibilidad con switches Huawei y Cisco.
-
-          ### 🚀 Novedades y Correcciones Principales
-
-          - **Nuevo Formato de Exportación Markdown en "Cápsula" (Compatible con Outlook)**:
-            - Se sustituyeron las tablas Markdown por un listado en cápsulas individuales con viñetas por punto de red, listo para copiar y pegar en correos de Outlook sin desbordamiento ni errores de formato.
-          - **Auto-Extracción de datos Predeterminada (Hands-Free)**:
-            - Renombrado y activado (\`checked\`) por defecto en la interfaz gráfica.
-            - Monitoreo reactivo del enlace: al conectar el cable a una roseta o switch, valida los parámetros y ejecuta la extracción automáticamente.
-          - **Fusión Inteligente CDP + LLDP**:
-            - Unificación de tramas simultáneas en una única tarjeta completa con el distintivo \`CDP + LLDP\`, eliminando tarjetas duplicadas o campos vacíos.
-          - **Soporte Completo para Switches Huawei (LLDP)**:
-            - Decodificación del modelo de hardware y sistema operativo desde el campo \`SystemDescription\` para switches Huawei VRP.
-            - Extracción robusta de IP de gestión en TLV 8 (IPv4 / IPv6) y de nombres de puerto en \`PortDescription\`.
-          - **Privacidad de Red y Apertura Automática**:
-            - Apertura automática de ventana de aplicación o navegador en Windows.
-            - Enlace seguro en \`127.0.0.1\` por defecto evitando bloqueos o alertas del Firewall de Windows.
-          - **Banner Animado y Saneamiento del Repositorio**:
-            - Cabecera SVG animada integrada en el proyecto.
-            - Eliminación de archivos internos de agentes (\`AGENTS.md\`, etc.) del repositorio.
-
-          ### 📦 Instalación y Uso
-
-          1. Descarga el archivo \`sre-network-discovery-\${TAG_NAME}-windows-x64.zip\`.
-          2. Descomprime en la carpeta de tu preferencia.
-          3. Haz doble clic en \`sre-network-discovery.exe\` (o clic derecho → *"Ejecutar como Administrador"*).
-          4. La aplicación abrirá automáticamente la interfaz de escritorio lista para escanear y validar.
+          Release ${TAG_NAME}
           EOF
+          fi
 
-          gh release create "$TAG_NAME" \
-            dist/sre-network-discovery-${TAG_NAME}-windows-x64.zip \
-            dist/sre-network-discovery-${TAG_NAME}-linux-x64.tar.gz \
-            --title "SRE Network Discovery $TAG_NAME" \
-            --notes-file release_notes.md
-
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Release $TAG_NAME exists. Updating release notes and assets..."
+            gh release edit "$TAG_NAME" \
+              --title "SRE Network Discovery $TAG_NAME" \
+              --notes-file "$NOTES_FILE"
+            gh release upload "$TAG_NAME" \
+              dist/sre-network-discovery-${TAG_NAME}-windows-x64.zip \
+              dist/sre-network-discovery-${TAG_NAME}-linux-x64.tar.gz \
+              --clobber
+          else
+            echo "Creating new release $TAG_NAME..."
+            gh release create "$TAG_NAME" \
+              dist/sre-network-discovery-${TAG_NAME}-windows-x64.zip \
+              dist/sre-network-discovery-${TAG_NAME}-linux-x64.tar.gz \
+              --title "SRE Network Discovery $TAG_NAME" \
+              --notes-file "$NOTES_FILE"
+          fi
