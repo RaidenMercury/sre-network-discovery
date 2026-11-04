@@ -53,8 +53,8 @@ try {
     # 2. Inicializar nueva sesion ETW
     New-NetEventSession -Name $sn -LocalFilePath $etl -CaptureMode SaveToFile -ErrorAction Stop | Out-Null
 
-    # 3. Proveedor con filtros de multicast CDP y LLDP (soporte fisico y switch virtual Hyper-V/WSL)
-    $llAddrs = @('01-80-C2-00-00-0E','01-80-C2-00-00-03','01-80-C2-00-00-00','01-00-0C-CC-CC-CC')
+    # 3. Proveedor con filtros de multicast CDP y LLDP (soporte fisico, switch virtual Hyper-V/WSL y telefonos IP)
+    $llAddrs = @('01-80-C2-00-00-0E','01-80-C2-00-00-03','01-80-C2-00-00-00','01-80-C2-00-00-02','01-00-0C-CC-CC-CC','01-00-0C-CC-CC-CD')
     try {
         Add-NetEventPacketCaptureProvider -SessionName $sn -CaptureType BothPhysicalAndSwitch -TruncationLength 0 -LinkLayerAddress $llAddrs -ErrorAction Stop | Out-Null
     } catch {
@@ -73,26 +73,34 @@ try {
             $_.Status -eq 'Up' -and $_.InterfaceType -notin @(23, 24) 
         })
     }
+    if ($targetAdapters.Count -eq 0) {
+        $targetAdapters = @(Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { 
+            $_.InterfaceType -notin @(23, 24) 
+        })
+    }
 
     foreach ($ad in $targetAdapters) {
         try {
-            Add-NetEventNetworkAdapter -Name $ad.Name -PromiscuousMode $true -ErrorAction Stop | Out-Null
+            Add-NetEventNetworkAdapter -Name $ad.Name -PromiscuousMode $true -ErrorAction SilentlyContinue | Out-Null
         } catch {
             Add-NetEventNetworkAdapter -Name $ad.Name -PromiscuousMode $false -ErrorAction SilentlyContinue | Out-Null
         }
     }
 
-    Start-NetEventSession -Name $sn -ErrorAction Stop | Out-Null
+    Start-NetEventSession -Name $sn -ErrorAction SilentlyContinue | Out-Null
     $started = $true
 
     # 5. Espera con margen para superar Spanning Tree y ciclo de broadcast
     Start-Sleep -Seconds %d
 
-    Stop-NetEventSession -Name $sn -ErrorAction Stop | Out-Null
+    Stop-NetEventSession -Name $sn -ErrorAction SilentlyContinue | Out-Null
     $started = $false
 
     # 6. Extraccion de eventos de fragmento de red
-    $events = @(Get-WinEvent -Path $etl -Oldest -FilterXPath "*[System[EventID=1001]]" -ErrorAction SilentlyContinue)
+    $events = @()
+    if (Test-Path -LiteralPath $etl) {
+        $events = @(Get-WinEvent -Path $etl -Oldest -FilterXPath "*[System[EventID=1001]]" -ErrorAction SilentlyContinue)
+    }
     $xq = [string[]]@("Event/EventData/Data[@Name='Fragment']")
     $sel = [Diagnostics.Eventing.Reader.EventLogPropertySelector]::new($xq)
     foreach ($ev in $events) {
@@ -111,7 +119,8 @@ try {
 }
 `, cleanAdapter, cleanAdapter, cleanAdapter, cleanAdapter, seconds)
 
-	cmd := exec.CommandContext(ctx, "powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script)
+	cmd := exec.CommandContext(ctx, "powershell", "-WindowStyle", "Hidden", "-NoProfile", "-NonInteractive", "-Command", script)
+	cmd.SysProcAttr = sysProcAttrHidden()
 	var outBuf bytes.Buffer
 	var errBuf bytes.Buffer
 	cmd.Stdout = &outBuf
@@ -119,6 +128,9 @@ try {
 
 	err := cmd.Run()
 	if err != nil {
+		if ctx.Err() != nil {
+			return nil, fmt.Errorf("escaneo detenido por el usuario")
+		}
 		msg := strings.TrimSpace(errBuf.String())
 		if msg == "" {
 			msg = err.Error()

@@ -7,11 +7,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/RaidenMercury/sre-network-discovery/pkg/capture"
 	"github.com/RaidenMercury/sre-network-discovery/pkg/link"
+	"github.com/RaidenMercury/sre-network-discovery/pkg/protocol"
 	"github.com/RaidenMercury/sre-network-discovery/pkg/report"
 )
 
@@ -25,6 +27,7 @@ type Config struct {
 	ExportMarkdown    bool
 	ExportCSV         bool
 	RemoteURL         string
+	Tag               string
 	OnStatus          func(msg string)
 }
 
@@ -42,6 +45,14 @@ func (r *Runner) log(cfg *Config, format string, a ...interface{}) {
 	if cfg.OnStatus != nil {
 		cfg.OnStatus(fmt.Sprintf(format, a...))
 	}
+}
+
+func canonicalMAC(s string) string {
+	s = strings.ToUpper(s)
+	s = strings.ReplaceAll(s, ":", "")
+	s = strings.ReplaceAll(s, "-", "")
+	s = strings.ReplaceAll(s, ".", "")
+	return strings.TrimSpace(s)
 }
 
 func (r *Runner) selectAdapter(cfg *Config) (link.AdapterInfo, error) {
@@ -97,7 +108,12 @@ func (r *Runner) RunOnce(ctx context.Context, cfg Config) (*report.Inventory, er
 		r.log(&cfg, "    - Resolucion DNS: %v | Canal Seguro (TLS): %v", val.DNSResolving, val.SecureChannelOK)
 
 		if !val.IsUp {
-			return nil, fmt.Errorf("el punto de red no tiene enlace fisico activo (cable desconectado)")
+			// Margen de espera por si el enlace físico está negociando auto-MDIX o velocidad Gigabit
+			time.Sleep(1500 * time.Millisecond)
+			val = link.ValidateLink(selectedAdapter.Name, cfg.RemoteURL)
+			if !val.IsUp {
+				return nil, fmt.Errorf("el punto de red no tiene enlace fisico activo (cable desconectado)")
+			}
 		}
 	}
 
@@ -107,7 +123,40 @@ func (r *Runner) RunOnce(ctx context.Context, cfg Config) (*report.Inventory, er
 		return nil, err
 	}
 
-	r.log(&cfg, "[+] Captura completada. Tramas validas recibidas: %d", len(results))
+	// 1. Recolectar MACs locales y hostname para descarte de auto-paquetes
+	localMACs := make(map[string]bool)
+	if m := canonicalMAC(selectedAdapter.MAC); m != "" {
+		localMACs[m] = true
+	}
+	allAdapters, _ := link.GetEligibleAdapters()
+	for _, a := range allAdapters {
+		if m := canonicalMAC(a.MAC); m != "" {
+			localMACs[m] = true
+		}
+	}
+	hostname, _ := os.Hostname()
+
+	// 2. Filtrado riguroso de paquetes reflejados por el propio host (Self-Packet Drop)
+	var cleanResults []protocol.DiscoveryResult
+	for _, res := range results {
+		src := canonicalMAC(res.SourceMAC)
+		chassis := canonicalMAC(res.ChassisID)
+		if (src != "" && localMACs[src]) || (chassis != "" && localMACs[chassis]) {
+			r.log(&cfg, "[i] Filtrado auto-anuncio saliente de la propia laptop (%s / %s)", res.SourceMAC, res.Protocol)
+			continue
+		}
+		if hostname != "" && strings.EqualFold(res.SwitchName, hostname) {
+			r.log(&cfg, "[i] Filtrado paquete con hostname local (%s)", res.SwitchName)
+			continue
+		}
+		if strings.HasPrefix(res.SwitchName, "Switch (") && res.Port == "" && res.VLAN == 0 {
+			r.log(&cfg, "[i] Filtrado anuncio vacio sin puerto ni VLAN (%s)", res.SourceMAC)
+			continue
+		}
+		cleanResults = append(cleanResults, res)
+	}
+
+	r.log(&cfg, "[+] Captura completada. Tramas validas recibidas: %d (auto-filtradas: %d)", len(cleanResults), len(results)-len(cleanResults))
 
 	var inv *report.Inventory
 	if cfg.AppendMode {
@@ -122,7 +171,15 @@ func (r *Runner) RunOnce(ctx context.Context, cfg Config) (*report.Inventory, er
 		inv = report.NewInventory()
 	}
 
-	inv.MergeResults(results, selectedAdapter.Name, selectedAdapter.MAC)
+	inv.MergeResults(cleanResults, selectedAdapter.Name, selectedAdapter.MAC)
+
+	if cfg.Tag != "" {
+		for i := range inv.Devices {
+			if inv.Devices[i].Tag == "" {
+				inv.Devices[i].Tag = cfg.Tag
+			}
+		}
+	}
 
 	if err := inv.SaveJSON(cfg.OutputPath); err != nil {
 		return nil, fmt.Errorf("error guardando reporte JSON: %w", err)
@@ -160,8 +217,9 @@ func (r *Runner) RunAutoExtract(ctx context.Context, cfg Config) error {
 	r.log(&cfg, "[*] Monitorizando insercion de cable y conexion de red...")
 
 	lastCableConnected := false
+	var linkTransitions []time.Time
 
-	ticker := time.NewTicker(3 * time.Second)
+	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -176,6 +234,23 @@ func (r *Runner) RunAutoExtract(ctx context.Context, cfg Config) error {
 			}
 
 			val := link.ValidateLink(adapter.Name, cfg.RemoteURL)
+
+			if val.IsUp != lastCableConnected {
+				now := time.Now()
+				linkTransitions = append(linkTransitions, now)
+				// Filtrar transiciones de los ultimos 10s
+				var recent []time.Time
+				for _, t := range linkTransitions {
+					if now.Sub(t) <= 10*time.Second {
+						recent = append(recent, t)
+					}
+				}
+				linkTransitions = recent
+				if len(linkTransitions) >= 3 {
+					r.log(&cfg, "[!] ALERTA CAPA 1: Inestabilidad de enlace detectada (%d microcortes en 10s). Posible cable/roseta con falla.", len(linkTransitions))
+				}
+			}
+
 			if val.IsUp && !lastCableConnected {
 				r.log(&cfg, "")
 				r.log(&cfg, "[!] Cable detectado en adaptador %s. Validando canal...", adapter.Name)
@@ -209,7 +284,7 @@ func (r *Runner) pushSecureRemote(ctx context.Context, endpoint string, inv *rep
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "SRE-Network-Discovery/2.0")
+	req.Header.Set("User-Agent", "SRE-Network-Discovery/2.1")
 
 	client := &http.Client{
 		Timeout: 10 * time.Second,

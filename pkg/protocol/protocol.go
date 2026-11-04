@@ -14,6 +14,10 @@ type DiscoveryResult struct {
 	Port              string `json:"port"`
 	PortDescription   string `json:"port_description"`
 	VLAN              int    `json:"vlan"`
+	VoiceVLAN         int    `json:"voice_vlan,omitempty"`
+	VoiceVLANSource   string `json:"voice_vlan_source,omitempty"`
+	VoiceTagged       bool   `json:"voice_tagged,omitempty"`
+	VoiceCoS          int    `json:"voice_cos,omitempty"`
 	Model             string `json:"model"`
 	ChassisID         string `json:"chassis_id"`
 	SystemDescription string `json:"system_description"`
@@ -179,6 +183,25 @@ func ParseLLDP(data []byte) *DiscoveryResult {
 					res.VLAN = int(binary.BigEndian.Uint16(body[4:6]))
 				} else if oui == "00-12-BB" && subtype == 10 && len(body) > 4 {
 					res.Model = sanitizeASCII(body[4:])
+				} else if oui == "00-12-BB" && subtype == 2 && len(body) >= 8 {
+					// LLDP-MED Network Policy (ANSI/TIA-1057)
+					appType := body[4]
+					if appType == 1 || (appType == 5 && res.VoiceVLAN == 0) {
+						tagged := (body[5] & 0x40) != 0
+						vlanID := (int(body[6]) << 4) | (int(body[7]) >> 4)
+						cos := (int(body[7]) >> 1) & 0x07
+						if vlanID > 0 && vlanID < 4095 {
+							res.VoiceVLAN = vlanID
+							res.VoiceTagged = tagged
+							res.VoiceCoS = cos
+							res.VoiceVLANSource = "LLDP-MED"
+						}
+					}
+				} else if oui == "00-E0-FC" && subtype == 3 && len(body) >= 6 && res.VoiceVLAN == 0 {
+					// Huawei Voice VLAN TLV
+					res.VoiceVLAN = int(binary.BigEndian.Uint16(body[4:6]))
+					res.VoiceTagged = true
+					res.VoiceVLANSource = "Huawei-LLDP"
 				}
 			}
 		}
@@ -337,6 +360,26 @@ func ParseCDP(data []byte) *DiscoveryResult {
 		case 0x000A:
 			if len(body) >= 2 {
 				res.VLAN = int(binary.BigEndian.Uint16(body[0:2]))
+			}
+		case 0x000E:
+			// Cisco VoIP VLAN Reply: Appliance Type (1 byte) + VLAN ID (2 bytes)
+			if len(body) >= 3 {
+				vlan := int(binary.BigEndian.Uint16(body[1:3]))
+				if vlan > 0 && vlan < 4095 {
+					res.VoiceVLAN = vlan
+					res.VoiceTagged = true
+					res.VoiceVLANSource = "CDP-VoIP"
+				}
+			}
+		case 0x000C:
+			// Cisco Appliance VLAN-ID: VLAN ID (2 bytes)
+			if len(body) >= 2 && res.VoiceVLAN == 0 {
+				vlan := int(binary.BigEndian.Uint16(body[0:2]))
+				if vlan > 0 && vlan < 4095 {
+					res.VoiceVLAN = vlan
+					res.VoiceTagged = true
+					res.VoiceVLANSource = "CDP-Appliance"
+				}
 			}
 		}
 	}

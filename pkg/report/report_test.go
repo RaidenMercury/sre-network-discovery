@@ -102,8 +102,8 @@ func TestInventorySaveAndLoad(t *testing.T) {
 		t.Fatalf("failed to read generated Markdown: %v", err)
 	}
 	mdContent := string(mdBytes)
-	if !strings.Contains(mdContent, "Punto de red n°1:") {
-		t.Errorf("expected 'Punto de red n°1:' in markdown, got:\n%s", mdContent)
+	if !strings.Contains(mdContent, "Punto de red n°1") {
+		t.Errorf("expected 'Punto de red n°1' in markdown, got:\n%s", mdContent)
 	}
 	if !strings.Contains(mdContent, "- Switch Name: CORE-01") {
 		t.Errorf("expected '- Switch Name: CORE-01' in markdown, got:\n%s", mdContent)
@@ -179,6 +179,39 @@ func TestInventoryMergeCDPAndLLDP(t *testing.T) {
 	}
 	if dev.TimesSeen != 2 {
 		t.Errorf("expected TimesSeen 2, got %d", dev.TimesSeen)
+	}
+	if dev.Verdict != "PASS" {
+		t.Errorf("expected Verdict PASS, got %s", dev.Verdict)
+	}
+}
+
+func TestInventoryVoiceVLANAndVerdict(t *testing.T) {
+	inv := NewInventory()
+
+	cdp := protocol.DiscoveryResult{
+		Protocol:        "CDP",
+		SwitchName:      "SW-VOIP-01",
+		Port:            "Gi1/0/5",
+		VLAN:            10,
+		VoiceVLAN:       110,
+		VoiceVLANSource: "CDP-VoIP",
+		VoiceTagged:     true,
+	}
+
+	inv.MergeDevice(cdp, "Ethernet", "18-66-DA-34-6B-78")
+
+	if len(inv.Devices) != 1 {
+		t.Fatalf("expected 1 device, got %d", len(inv.Devices))
+	}
+	dev := inv.Devices[0]
+	if dev.VoiceVLAN != 110 {
+		t.Errorf("expected VoiceVLAN 110, got %d", dev.VoiceVLAN)
+	}
+	if dev.Verdict != "PASS" {
+		t.Errorf("expected Verdict PASS, got %s", dev.Verdict)
+	}
+	if !strings.Contains(dev.VerdictReason, "Voz: VLAN 110") {
+		t.Errorf("expected VerdictReason containing 'Voz: VLAN 110', got '%s'", dev.VerdictReason)
 	}
 }
 

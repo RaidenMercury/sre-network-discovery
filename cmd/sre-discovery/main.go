@@ -17,7 +17,7 @@ import (
 
 const (
 	AppName    = "SRE Network Discovery"
-	AppVersion = "2.0.2"
+	AppVersion = "2.1.0"
 )
 
 func printBanner() {
@@ -38,6 +38,7 @@ func main() {
 	mdFlag := flag.Bool("md", true, "Generar tambien reporte en formato Markdown (.md)")
 	csvFlag := flag.Bool("csv", true, "Generar tambien reporte en formato CSV (.csv)")
 	remoteFlag := flag.String("remote", "", "URL HTTPS de canal seguro para envio automatico de datos")
+	tagFlag := flag.String("tag", "", "Etiqueta física de roseta, toma o ticket de campo (ej. 'Roseta 12 - Piso 2')")
 	listFlag := flag.Bool("list", false, "Listar adaptadores de red disponibles y salir")
 	portFlag := flag.Int("port", 0, "Puerto local para la interfaz gráfica (0 para aleatorio)")
 	hostFlag := flag.String("host", "127.0.0.1", "Dirección IP de escucha para la interfaz web (127.0.0.1 o 0.0.0.0)")
@@ -81,6 +82,7 @@ func main() {
 		ExportMarkdown:    *mdFlag,
 		ExportCSV:         *csvFlag,
 		RemoteURL:         *remoteFlag,
+		Tag:               *tagFlag,
 		OnStatus: func(msg string) {
 			fmt.Println(msg)
 		},
@@ -111,10 +113,19 @@ func main() {
 		}
 		vlan := "-"
 		if d.VLAN != 0 {
-			vlan = fmt.Sprintf("VLAN %d", d.VLAN)
+			vlan = fmt.Sprintf("Datos: VLAN %d", d.VLAN)
 		}
-		fmt.Printf("  [%d] Switch: %-20s | Puerto: %-15s | %s\n", idx+1, d.SwitchName, d.Port, vlan)
-		fmt.Printf("      IP: %-24s | Modelo: %-15s | Proto: %s\n", ip, d.Model, d.Protocol)
+		voice := "Voz: -"
+		if d.VoiceVLAN != 0 {
+			voice = fmt.Sprintf("Voz: VLAN %d", d.VoiceVLAN)
+		}
+		verdict := fmt.Sprintf("[%s]", d.Verdict)
+		fmt.Printf("  [%d] %-6s Switch: %-18s | Puerto: %-15s\n", idx+1, verdict, d.SwitchName, d.Port)
+		fmt.Printf("      Red: %-22s | %-20s | IP: %s\n", vlan, voice, ip)
+		fmt.Printf("      HW : Modelo: %-16s | Proto: %-15s\n", d.Model, d.Protocol)
+		if d.Tag != "" {
+			fmt.Printf("      Toma/Etiqueta: %s\n", d.Tag)
+		}
 		if d.TimesSeen > 1 {
 			fmt.Printf("      Detecciones acumuladas: %d | Ultima vez: %s\n", d.TimesSeen, d.LastSeen.Format("15:04:05"))
 		}

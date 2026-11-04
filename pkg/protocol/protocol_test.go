@@ -178,4 +178,91 @@ func TestParseHuaweiLLDP(t *testing.T) {
 	}
 }
 
+func TestParseCDPVoiceVLAN(t *testing.T) {
+	packet := make([]byte, 160)
+	copy(packet[0:6], []byte{0x01, 0x00, 0x0C, 0xCC, 0xCC, 0xCC})
+	copy(packet[6:12], []byte{0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF})
+	binary.BigEndian.PutUint16(packet[12:14], 140)
+	copy(packet[14:22], []byte{0xAA, 0xAA, 0x03, 0x00, 0x00, 0x0C, 0x20, 0x00})
+
+	offset := 22
+	packet[offset] = 0x02
+	packet[offset+1] = 180
+	binary.BigEndian.PutUint16(packet[offset+2:offset+4], 0x0000)
+	offset += 4
+
+	putCDPTLV := func(tlvType uint16, body []byte) {
+		binary.BigEndian.PutUint16(packet[offset:offset+2], tlvType)
+		binary.BigEndian.PutUint16(packet[offset+2:offset+4], uint16(len(body)+4))
+		offset += 4
+		copy(packet[offset:], body)
+		offset += len(body)
+	}
+
+	putCDPTLV(0x0001, []byte("SW-CISCO-VOIP"))
+	putCDPTLV(0x0003, []byte("GigabitEthernet1/0/1"))
+	putCDPTLV(0x000A, []byte{0, 20})          // Data VLAN 20
+	putCDPTLV(0x000E, []byte{1, 0, 120})      // VoIP VLAN Reply: Appliance 1, VLAN 120
+
+	res := ParseCDP(packet[:offset])
+	if res == nil {
+		t.Fatal("expected non-nil CDP result")
+	}
+	if res.VLAN != 20 {
+		t.Errorf("expected Data VLAN 20, got %d", res.VLAN)
+	}
+	if res.VoiceVLAN != 120 {
+		t.Errorf("expected Voice VLAN 120, got %d", res.VoiceVLAN)
+	}
+	if res.VoiceVLANSource != "CDP-VoIP" {
+		t.Errorf("expected VoiceVLANSource CDP-VoIP, got %s", res.VoiceVLANSource)
+	}
+}
+
+func TestParseLLDPMEDVoiceVLAN(t *testing.T) {
+	packet := make([]byte, 160)
+	copy(packet[0:6], []byte{0x01, 0x80, 0xC2, 0x00, 0x00, 0x0E})
+	copy(packet[6:12], []byte{0x00, 0x11, 0x22, 0x33, 0x44, 0x55})
+	binary.BigEndian.PutUint16(packet[12:14], 0x88CC)
+
+	offset := 14
+	putTLV := func(tlvType int, body []byte) {
+		hdr := uint16(tlvType<<9) | uint16(len(body)&0x01FF)
+		binary.BigEndian.PutUint16(packet[offset:offset+2], hdr)
+		offset += 2
+		copy(packet[offset:], body)
+		offset += len(body)
+	}
+
+	putTLV(1, append([]byte{4}, []byte{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}...))
+	putTLV(2, append([]byte{5}, []byte("Gi1/0/24")...))
+	putTLV(5, []byte("SW-MED-CORE"))
+	// LLDP IEEE PVID (Data VLAN 30)
+	putTLV(127, []byte{0x00, 0x80, 0xC2, 1, 0, 30})
+	// LLDP-MED Network Policy: OUI 00-12-BB, Subtype 2, App 1 (Voice), Tagged 0x40, VLAN 130 ((0x08<<4) | (0x20>>4)), CoS 5
+	// VLAN 130 = 0x082
+	// byte 6 = 0x08, byte 7 = (0x2 << 4) | (5 << 1) = 0x20 | 0x0A = 0x2A
+	putTLV(127, []byte{0x00, 0x12, 0xBB, 2, 1, 0x40, 0x08, 0x2A})
+
+	res := ParseLLDP(packet[:offset])
+	if res == nil {
+		t.Fatal("expected non-nil LLDP result")
+	}
+	if res.VLAN != 30 {
+		t.Errorf("expected Data VLAN 30, got %d", res.VLAN)
+	}
+	if res.VoiceVLAN != 130 {
+		t.Errorf("expected Voice VLAN 130, got %d", res.VoiceVLAN)
+	}
+	if !res.VoiceTagged {
+		t.Errorf("expected VoiceTagged true, got false")
+	}
+	if res.VoiceCoS != 5 {
+		t.Errorf("expected VoiceCoS 5, got %d", res.VoiceCoS)
+	}
+	if res.VoiceVLANSource != "LLDP-MED" {
+		t.Errorf("expected VoiceVLANSource LLDP-MED, got %s", res.VoiceVLANSource)
+	}
+}
+
 

@@ -21,6 +21,13 @@ type DeviceEntry struct {
 	Port              string    `json:"port"`
 	PortDescription   string    `json:"port_description"`
 	VLAN              int       `json:"vlan"`
+	VoiceVLAN         int       `json:"voice_vlan,omitempty"`
+	VoiceVLANSource   string    `json:"voice_vlan_source,omitempty"`
+	VoiceTagged       bool      `json:"voice_tagged,omitempty"`
+	VoiceCoS          int       `json:"voice_cos,omitempty"`
+	Verdict           string    `json:"verdict"`
+	VerdictReason     string    `json:"verdict_reason"`
+	Tag               string    `json:"tag,omitempty"`
 	Model             string    `json:"model"`
 	Protocol          string    `json:"protocol"`
 	ChassisID         string    `json:"chassis_id"`
@@ -30,6 +37,24 @@ type DeviceEntry struct {
 	FirstSeen         time.Time `json:"first_seen"`
 	LastSeen          time.Time `json:"last_seen"`
 	TimesSeen         int       `json:"times_seen"`
+}
+
+func (dev *DeviceEntry) CalculateVerdict() {
+	if dev.Port == "" && dev.SwitchName == "" {
+		dev.Verdict = "FAIL"
+		dev.VerdictReason = "Sin identificación de switch ni puerto"
+		return
+	}
+	if dev.VLAN == 0 {
+		dev.Verdict = "WARN"
+		dev.VerdictReason = "VLAN de datos nativa o no anunciada"
+	} else if dev.VoiceVLAN == 0 {
+		dev.Verdict = "PASS"
+		dev.VerdictReason = fmt.Sprintf("Punto de datos operativo (Datos: VLAN %d)", dev.VLAN)
+	} else {
+		dev.Verdict = "PASS"
+		dev.VerdictReason = fmt.Sprintf("Operativo completo (Datos: VLAN %d | Voz: VLAN %d)", dev.VLAN, dev.VoiceVLAN)
+	}
 }
 
 type Inventory struct {
@@ -147,6 +172,12 @@ func (inv *Inventory) MergeDevice(d protocol.DiscoveryResult, adapter, mac strin
 			if dev.Model == "" && d.Model != "" {
 				dev.Model = d.Model
 			}
+			if dev.VoiceVLAN == 0 && d.VoiceVLAN != 0 {
+				dev.VoiceVLAN = d.VoiceVLAN
+				dev.VoiceVLANSource = d.VoiceVLANSource
+				dev.VoiceTagged = d.VoiceTagged
+				dev.VoiceCoS = d.VoiceCoS
+			}
 			// Preferir nombre de puerto más descriptivo
 			if len(d.Port) > len(dev.Port) {
 				dev.Port = d.Port
@@ -166,17 +197,22 @@ func (inv *Inventory) MergeDevice(d protocol.DiscoveryResult, adapter, mac strin
 			if dev.LocalMAC == "" {
 				dev.LocalMAC = mac
 			}
+			dev.CalculateVerdict()
 			return
 		}
 	}
 
-	inv.Devices = append(inv.Devices, DeviceEntry{
+	newDev := DeviceEntry{
 		ID:                key,
 		SwitchName:        d.SwitchName,
 		SwitchIP:          d.SwitchIP,
 		Port:              d.Port,
 		PortDescription:   d.PortDescription,
 		VLAN:              d.VLAN,
+		VoiceVLAN:         d.VoiceVLAN,
+		VoiceVLANSource:   d.VoiceVLANSource,
+		VoiceTagged:       d.VoiceTagged,
+		VoiceCoS:          d.VoiceCoS,
 		Model:             d.Model,
 		Protocol:          d.Protocol,
 		ChassisID:         d.ChassisID,
@@ -186,7 +222,9 @@ func (inv *Inventory) MergeDevice(d protocol.DiscoveryResult, adapter, mac strin
 		FirstSeen:         now,
 		LastSeen:          now,
 		TimesSeen:         1,
-	})
+	}
+	newDev.CalculateVerdict()
+	inv.Devices = append(inv.Devices, newDev)
 }
 
 func (inv *Inventory) MergeResults(results []protocol.DiscoveryResult, adapter, mac string) {
@@ -252,6 +290,14 @@ func (inv *Inventory) SaveMarkdown(path string) error {
 		if d.VLAN != 0 {
 			vlanStr = fmt.Sprintf("VLAN %d", d.VLAN)
 		}
+		voiceStr := "Sin VLAN de voz"
+		if d.VoiceVLAN != 0 {
+			taggedStr := "Untagged"
+			if d.VoiceTagged {
+				taggedStr = "Tagged 802.1Q"
+			}
+			voiceStr = fmt.Sprintf("VLAN %d (%s, %s)", d.VoiceVLAN, d.VoiceVLANSource, taggedStr)
+		}
 		ipStr := d.SwitchIP
 		if ipStr == "" {
 			ipStr = "No anunciada"
@@ -277,12 +323,20 @@ func (inv *Inventory) SaveMarkdown(path string) error {
 			}
 		}
 
-		sb.WriteString(fmt.Sprintf("Punto de red n°%d:\n", i+1))
+		tagStr := ""
+		if d.Tag != "" {
+			tagStr = fmt.Sprintf(" - Etiqueta / Toma: %s\n", d.Tag)
+		}
+
+		sb.WriteString(fmt.Sprintf("Punto de red n°%d [%s]:\n", i+1, d.Verdict))
+		sb.WriteString(fmt.Sprintf(" - Veredicto: %s (%s)\n", d.Verdict, d.VerdictReason))
 		sb.WriteString(fmt.Sprintf(" - Adaptador local: %s\n", adapterStr))
+		sb.WriteString(tagStr)
 		sb.WriteString(fmt.Sprintf(" - Switch Name: %s\n", d.SwitchName))
 		sb.WriteString(fmt.Sprintf(" - IP Gestion: %s\n", ipStr))
 		sb.WriteString(fmt.Sprintf(" - Puerto Switch: %s\n", portStr))
-		sb.WriteString(fmt.Sprintf(" - VLAN: %s\n", vlanStr))
+		sb.WriteString(fmt.Sprintf(" - VLAN Datos: %s\n", vlanStr))
+		sb.WriteString(fmt.Sprintf(" - VLAN Voz (VoIP): %s\n", voiceStr))
 		sb.WriteString(fmt.Sprintf(" - Modelo: %s\n", modelStr))
 		sb.WriteString(fmt.Sprintf(" - Protocolo: %s\n", d.Protocol))
 		sb.WriteString(fmt.Sprintf(" - Detecciones: %d\n", d.TimesSeen))
@@ -308,8 +362,8 @@ func (inv *Inventory) SaveCSV(path string) error {
 	defer w.Flush()
 
 	header := []string{
-		"SwitchName", "SwitchIP", "Port", "PortDescription", "VLAN",
-		"Model", "Protocol", "ChassisID", "LocalAdapter", "LocalMAC",
+		"SwitchName", "SwitchIP", "Port", "PortDescription", "VLAN", "VoiceVLAN",
+		"Verdict", "Tag", "Model", "Protocol", "ChassisID", "LocalAdapter", "LocalMAC",
 		"TimesSeen", "FirstSeen", "LastSeen",
 	}
 	if err := w.Write(header); err != nil {
@@ -323,6 +377,9 @@ func (inv *Inventory) SaveCSV(path string) error {
 			d.Port,
 			d.PortDescription,
 			strconv.Itoa(d.VLAN),
+			strconv.Itoa(d.VoiceVLAN),
+			d.Verdict,
+			d.Tag,
 			d.Model,
 			d.Protocol,
 			d.ChassisID,

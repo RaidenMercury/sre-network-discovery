@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"os/exec"
-	"runtime"
 	"strings"
 	"time"
 )
@@ -224,30 +222,6 @@ func ValidateLink(adapterName string, checkSecureEndpoint string) *LinkValidatio
 	}
 
 	return res
-}
-
-func detectGateway(adapterName string) string {
-	if runtime.GOOS == "windows" {
-		cmd := exec.Command("powershell", "-NoProfile", "-NonInteractive", "-Command",
-			fmt.Sprintf("(Get-NetRoute -InterfaceAlias '%s' -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | Select-Object -First 1).NextHop", adapterName))
-		out, err := cmd.Output()
-		if err == nil {
-			gw := strings.TrimSpace(string(out))
-			if net.ParseIP(gw) != nil {
-				return gw
-			}
-		}
-	} else {
-		cmd := exec.Command("sh", "-c", "ip route show default | awk '{print $3}' | head -n 1")
-		out, err := cmd.Output()
-		if err == nil {
-			gw := strings.TrimSpace(string(out))
-			if net.ParseIP(gw) != nil {
-				return gw
-			}
-		}
-	}
-	return ""
 }
 
 func probeGateway(gateway string) bool {

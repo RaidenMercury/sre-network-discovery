@@ -23,13 +23,18 @@ import (
 var webFS embed.FS
 
 type Server struct {
-	mu            sync.Mutex
-	inventoryFile string
-	currentInv    *report.Inventory
-	runner        *engine.Runner
+	mu              sync.Mutex
+	inventoryFile   string
+	currentInv      *report.Inventory
+	runner          *engine.Runner
+	lastPing        time.Time
+	hasReceivedPing bool
+	shutdownFunc    func()
+	scanCancel      context.CancelFunc
+	isScanning      bool
 }
 
-func NewServer(inventoryFile string) *Server {
+func NewServer(inventoryFile string, shutdownFunc func()) *Server {
 	inv, err := report.LoadInventory(inventoryFile)
 	if err != nil {
 		inv = report.NewInventory()
@@ -38,6 +43,8 @@ func NewServer(inventoryFile string) *Server {
 		inventoryFile: inventoryFile,
 		currentInv:    inv,
 		runner:        engine.NewRunner(),
+		lastPing:      time.Now(),
+		shutdownFunc:  shutdownFunc,
 	}
 }
 
@@ -102,11 +109,31 @@ func (s *Server) routes() http.Handler {
 			return
 		}
 
+		s.mu.Lock()
+		if s.isScanning {
+			s.mu.Unlock()
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]string{"error": "Ya hay un escaneo en curso"})
+			return
+		}
+		scanCtx, cancel := context.WithCancel(context.Background())
+		s.scanCancel = cancel
+		s.isScanning = true
+		s.mu.Unlock()
+
+		defer func() {
+			s.mu.Lock()
+			s.isScanning = false
+			s.scanCancel = nil
+			s.mu.Unlock()
+		}()
+
 		var req struct {
 			Adapter  string `json:"adapter"`
 			Duration int    `json:"duration"`
 			Append   bool   `json:"append"`
 			Remote   string `json:"remote"`
+			Tag      string `json:"tag"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, "JSON invalido", 400)
@@ -122,9 +149,10 @@ func (s *Server) routes() http.Handler {
 			ExportMarkdown:    true,
 			ExportCSV:         true,
 			RemoteURL:         req.Remote,
+			Tag:               req.Tag,
 		}
 
-		inv, err := s.runner.RunOnce(r.Context(), cfg)
+		inv, err := s.runner.RunOnce(scanCtx, cfg)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
@@ -137,6 +165,19 @@ func (s *Server) routes() http.Handler {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(inv)
+	})
+
+	mux.HandleFunc("/api/stop", func(w http.ResponseWriter, r *http.Request) {
+		s.mu.Lock()
+		if s.scanCancel != nil {
+			s.scanCancel()
+			s.scanCancel = nil
+		}
+		s.isScanning = false
+		s.mu.Unlock()
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"status": "stopped"})
 	})
 
 	mux.HandleFunc("/api/clear", func(w http.ResponseWriter, r *http.Request) {
@@ -173,6 +214,26 @@ func (s *Server) routes() http.Handler {
 		}
 	})
 
+	mux.HandleFunc("/api/ping", func(w http.ResponseWriter, r *http.Request) {
+		s.mu.Lock()
+		s.lastPing = time.Now()
+		s.hasReceivedPing = true
+		s.mu.Unlock()
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"pong":true}`))
+	})
+
+	mux.HandleFunc("/api/shutdown", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"ok":true}`))
+		go func() {
+			time.Sleep(200 * time.Millisecond)
+			if s.shutdownFunc != nil {
+				s.shutdownFunc()
+			}
+		}()
+	})
+
 	return mux
 }
 
@@ -187,14 +248,42 @@ func Launch(ctx context.Context, inventoryFile string, host string, port int, op
 	actualPort := listener.Addr().(*net.TCPAddr).Port
 	url := fmt.Sprintf("http://localhost:%d", actualPort)
 
-	srv := NewServer(inventoryFile)
+	serverCtx, serverCancel := context.WithCancel(ctx)
+	defer serverCancel()
+
+	srv := NewServer(inventoryFile, serverCancel)
 	httpServer := &http.Server{
 		Handler: srv.routes(),
 	}
 
 	go func() {
-		<-ctx.Done()
+		<-serverCtx.Done()
 		_ = httpServer.Shutdown(context.Background())
+		time.Sleep(100 * time.Millisecond)
+		os.Exit(0)
+	}()
+
+	// Watchdog: Si tras recibir el primer ping, pasan más de 6 segundos sin señales de vida
+	// (ej. el usuario cerró la ventana del navegador), cerrar el proceso Go de inmediato.
+	go func() {
+		ticker := time.NewTicker(2 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-serverCtx.Done():
+				return
+			case <-ticker.C:
+				srv.mu.Lock()
+				active := srv.hasReceivedPing
+				last := srv.lastPing
+				srv.mu.Unlock()
+
+				if active && time.Since(last) > 6*time.Second {
+					serverCancel()
+					return
+				}
+			}
+		}
 	}()
 
 	if openWindow {
@@ -235,23 +324,23 @@ func openAppWindow(url string) {
 		for _, p := range candidates {
 			if p != "" {
 				if _, err := os.Stat(p); err == nil {
-					cmd := exec.Command(p, fmt.Sprintf("--app=%s", url), "--window-size=680,880")
+					cmd := exec.Command(p, fmt.Sprintf("--app=%s", url), "--window-size=1120,780")
 					if err := cmd.Start(); err == nil {
 						return
 					}
 				}
 			}
 		}
-		// Fallback estándar en Windows: abrir en navegador predeterminado
-		if err := exec.Command("cmd.exe", "/c", "start", "", url).Start(); err == nil {
+		// Fallback estándar en Windows: abrir en navegador predeterminado de manera silenciosa
+		cmd := exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
+		if err := cmd.Start(); err == nil {
 			return
 		}
-		_ = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
 	} else if runtime.GOOS == "linux" {
 		for _, b := range []string{"google-chrome", "chromium", "brave-browser", "xdg-open"} {
 			args := []string{url}
 			if strings.Contains(b, "chrome") || strings.Contains(b, "chromium") {
-				args = []string{fmt.Sprintf("--app=%s", url), "--window-size=680,880"}
+				args = []string{fmt.Sprintf("--app=%s", url), "--window-size=1120,780"}
 			}
 			cmd := exec.Command(b, args...)
 			if err := cmd.Start(); err == nil {

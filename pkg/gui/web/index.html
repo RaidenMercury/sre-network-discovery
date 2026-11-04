@@ -7,45 +7,85 @@
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
   <style>
     :root {
-      --bg: #090b10;
-      --surface: #101422;
-      --card-bg: rgba(18, 22, 38, 0.72);
-      --card-border: rgba(91, 141, 239, 0.18);
-      --text: #f1f5f9;
-      --muted: #94a3b8;
-      --accent: #3b82f6;
-      --accent-glow: rgba(59, 130, 246, 0.4);
-      --cyan: #06b6d4;
-      --success: #10b981;
-      --warning: #f59e0b;
-      --error: #ef4444;
-      --purple: #8b5cf6;
-      --radius: 14px;
+      --bg: #0A0C10;
+      --bg-alt: #10131A;
+      --surface: rgba(16, 20, 28, 0.78);
+      --surface-raised: rgba(24, 30, 42, 0.88);
+      --surface-border: rgba(255, 255, 255, 0.08);
+      --surface-border-focus: rgba(134, 102, 176, 0.5);
+      --text: #F3F4F6;
+      --text-muted: #8E99B0;
+      --text-dim: #505B73;
+      --accent: #8666b0;
+      --accent-hover: #9878c4;
+      --accent-glow: rgba(134, 102, 176, 0.28);
+      --accent-subtle: rgba(134, 102, 176, 0.12);
+      --data-color: #6393E8;
+      --data-subtle: rgba(99, 147, 232, 0.12);
+      --voice-color: #A385CE;
+      --voice-subtle: rgba(163, 133, 206, 0.12);
+      --success: #10B981;
+      --success-subtle: rgba(16, 185, 129, 0.12);
+      --warn: #E5A93C;
+      --warn-subtle: rgba(229, 169, 60, 0.12);
+      --danger: #E05252;
+      --danger-subtle: rgba(224, 82, 82, 0.12);
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --spring: cubic-bezier(0.16, 1, 0.3, 1);
+      --shadow-glass: 0 16px 40px -10px rgba(0, 0, 0, 0.65), 0 0 1px 1px rgba(255, 255, 255, 0.06) inset;
+    }
+
+    body.theme-high-contrast {
+      --bg: #000000;
+      --bg-alt: #0a0a0a;
+      --surface: #111111;
+      --surface-raised: #1a1a1a;
+      --surface-border: #444444;
+      --text: #FFFFFF;
+      --text-muted: #CCCCCC;
+      --text-dim: #999999;
+      --accent: #7C4DFF;
+      --data-color: #60A5FA;
+      --voice-color: #C084FC;
+    }
+
+    body.theme-clean-slate {
+      --bg: #F4F6F9;
+      --bg-alt: #E9ECEF;
+      --surface: rgba(255, 255, 255, 0.95);
+      --surface-raised: #FFFFFF;
+      --surface-border: rgba(0, 0, 0, 0.1);
+      --text: #111827;
+      --text-muted: #4B5563;
+      --text-dim: #9CA3AF;
+      --shadow-glass: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
     }
 
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
       user-select: none;
     }
 
     body {
       background-color: var(--bg);
-      background-image: 
-        radial-gradient(circle at 15% 15%, rgba(59, 130, 246, 0.08) 0%, transparent 40%),
-        radial-gradient(circle at 85% 85%, rgba(139, 92, 246, 0.08) 0%, transparent 40%);
+      background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+      background-size: 24px 24px;
       color: var(--text);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       overflow-x: hidden;
       position: relative;
+      transition: background-color 0.25s ease, color 0.25s ease;
     }
 
-    /* Radar Background Canvas */
-    #radarCanvas {
+    /* Real-Time Pulse & Signal Visualizer Canvas */
+    #pulseCanvas {
       position: fixed;
       top: 0;
       left: 0;
@@ -53,21 +93,22 @@
       height: 100vh;
       pointer-events: none;
       z-index: 0;
-      opacity: 0.35;
+      opacity: 0.25;
     }
 
+    /* Header */
     header {
-      background: rgba(14, 18, 30, 0.85);
-      backdrop-filter: blur(20px);
-      border-bottom: 1px solid var(--card-border);
-      padding: 14px 24px;
+      background: var(--surface);
+      backdrop-filter: blur(28px) saturate(180%);
+      border-bottom: 1px solid var(--surface-border);
+      padding: 14px 28px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       position: sticky;
       top: 0;
       z-index: 100;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
     }
 
     .brand {
@@ -77,29 +118,15 @@
     }
 
     .brand-icon {
-      width: 38px;
-      height: 38px;
-      background: linear-gradient(135deg, var(--accent), var(--cyan));
-      border-radius: 10px;
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent), #684b91);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: 800;
-      font-size: 18px;
-      color: #fff;
-      box-shadow: 0 0 20px var(--accent-glow);
+      box-shadow: 0 4px 16px var(--accent-glow);
       position: relative;
-    }
-
-    .brand-icon::after {
-      content: '';
-      position: absolute;
-      inset: -2px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, var(--accent), var(--purple));
-      z-index: -1;
-      opacity: 0.6;
-      filter: blur(4px);
     }
 
     .brand-text h1 {
@@ -111,19 +138,20 @@
       gap: 8px;
     }
 
-    .brand-text .version-tag {
+    .brand-text .version-badge {
       font-size: 10px;
-      background: rgba(59, 130, 246, 0.2);
-      color: var(--cyan);
-      border: 1px solid rgba(6, 182, 212, 0.3);
-      padding: 1px 6px;
-      border-radius: 10px;
-      font-weight: 600;
+      background: var(--accent-subtle);
+      color: #CBB4E8;
+      border: 1px solid rgba(134, 102, 176, 0.35);
+      padding: 2px 7px;
+      border-radius: 8px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
     }
 
     .brand-text p {
       font-size: 12px;
-      color: var(--muted);
+      color: var(--text-muted);
     }
 
     .header-actions {
@@ -132,163 +160,242 @@
       gap: 12px;
     }
 
-    .status-badge {
+    .btn-icon {
+      background: var(--surface-raised);
+      border: 1px solid var(--surface-border);
+      color: var(--text);
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 11px;
-      font-weight: 600;
-      padding: 6px 14px;
-      border-radius: 20px;
-      background: rgba(16, 185, 129, 0.12);
-      color: var(--success);
-      border: 1px solid rgba(16, 185, 129, 0.25);
-      box-shadow: 0 0 10px rgba(16, 185, 129, 0.15);
-      transition: all 0.3s ease;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 15px;
+      transition: all 0.2s var(--spring);
     }
 
-    .status-badge.scanning {
-      background: rgba(59, 130, 246, 0.15);
-      color: var(--cyan);
-      border-color: rgba(6, 182, 212, 0.4);
-      box-shadow: 0 0 14px rgba(6, 182, 212, 0.3);
+    .btn-icon:hover {
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    .btn-icon:active {
+      transform: scale(0.95);
+    }
+
+    .carrier-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+
+    .carrier-indicator .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .carrier-indicator.up {
+      color: var(--success);
+      background: var(--success-subtle);
+    }
+
+    .carrier-indicator.down {
+      color: var(--danger);
+      background: var(--danger-subtle);
+    }
+
+    .v-icon {
+      width: 13px;
+      height: 13px;
+      stroke: currentColor;
+      display: inline-block;
+      vertical-align: -2px;
+    }
+
+    .copy-icon {
+      opacity: 0.45;
+      margin-left: 5px;
+      vertical-align: -1px;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+    }
+
+    .detail-item .value:hover .copy-icon {
+      opacity: 1;
+      transform: scale(1.15);
+      stroke: var(--accent);
     }
 
     .status-dot {
-      width: 8px;
-      height: 8px;
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
       background: currentColor;
-      box-shadow: 0 0 8px currentColor;
     }
 
-    .status-badge.scanning .status-dot {
-      animation: pulse 1.2s infinite;
-    }
-
-    @keyframes pulse {
-      0% { transform: scale(0.9); opacity: 0.6; }
-      50% { transform: scale(1.3); opacity: 1; }
-      100% { transform: scale(0.9); opacity: 0.6; }
-    }
-
+    /* Main Container */
     main {
-      padding: 24px;
-      flex: 1;
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 24px 20px 48px;
       display: flex;
       flex-direction: column;
-      gap: 20px;
-      max-width: 980px;
-      margin: 0 auto;
-      width: 100%;
-      z-index: 1;
+      gap: 22px;
     }
 
+    /* Glass Panels */
     .glass-panel {
-      background: var(--card-bg);
-      backdrop-filter: blur(24px);
-      border: 1px solid var(--card-border);
-      border-radius: var(--radius);
-      padding: 20px;
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
-      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+      background: var(--surface);
+      backdrop-filter: blur(28px) saturate(180%);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      box-shadow: var(--shadow-glass);
       position: relative;
-      overflow: hidden;
     }
 
-    .glass-panel::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+    /* Form Controls */
+    .form-row {
+      display: grid;
+      grid-template-columns: 1.8fr 1fr;
+      gap: 14px;
+      margin-bottom: 14px;
     }
 
-    .glass-panel:hover {
-      border-color: rgba(91, 141, 239, 0.35);
-      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+    @media (max-width: 768px) {
+      .form-row { grid-template-columns: 1fr; }
     }
 
     .form-group {
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      margin-bottom: 14px;
+      gap: 6px;
     }
 
-    .form-group label {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
+    label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.2px;
     }
 
-    select, input {
-      background: rgba(16, 20, 34, 0.9);
-      border: 1px solid var(--card-border);
+    select, input[type="text"], input[type="number"] {
+      background: var(--surface-raised);
+      border: 1px solid var(--surface-border);
       color: var(--text);
-      padding: 12px 14px;
-      border-radius: 10px;
+      padding: 11px 14px;
+      border-radius: var(--radius-sm);
       font-size: 13px;
       outline: none;
-      transition: all 0.2s;
+      transition: all 0.2s var(--spring);
     }
 
-    select option {
-      background: #101422;
-      color: #f1f5f9;
-      padding: 8px;
+    select:focus, input[type="text"]:focus, input[type="number"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-subtle);
     }
 
-    select:focus, input:focus {
-      border-color: var(--cyan);
-      box-shadow: 0 0 12px rgba(6, 182, 212, 0.25);
+    /* Validation Card */
+    .validation-card {
+      background: var(--surface-raised);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-md);
+      padding: 16px 18px;
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: all 0.3s var(--spring);
     }
 
-    .controls-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 14px;
+    .validation-card.ok {
+      border-left: 4px solid var(--success);
     }
 
-    .toggle-card {
-      background: rgba(22, 28, 48, 0.6);
-      border: 1px solid rgba(91, 141, 239, 0.12);
-      border-radius: 10px;
-      padding: 12px 16px;
+    .validation-card.error {
+      border-left: 4px solid var(--danger);
+    }
+
+    .validation-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
     }
 
-    .toggle-card span {
+    .val-title {
       font-size: 13px;
-      font-weight: 500;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .validation-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .v-chip {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--surface-border);
+      padding: 5px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .v-chip strong {
+      color: var(--text);
+    }
+
+    /* Controls Grid & Toggles */
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .toggle-card {
+      background: var(--surface-raised);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
     }
 
     .switch {
       position: relative;
       display: inline-block;
-      width: 46px;
+      width: 44px;
       height: 24px;
     }
 
-    .switch input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
+    .switch input { opacity: 0; width: 0; height: 0; }
 
     .slider {
       position: absolute;
-      cursor: pointer;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background-color: #27304d;
-      transition: .3s;
+      inset: 0;
+      background-color: var(--text-dim);
       border-radius: 24px;
+      cursor: pointer;
+      transition: 0.25s var(--spring);
     }
 
     .slider:before {
@@ -298,381 +405,234 @@
       width: 18px;
       left: 3px;
       bottom: 3px;
-      background-color: white;
-      transition: .3s;
+      background-color: #fff;
       border-radius: 50%;
+      transition: 0.25s var(--spring);
     }
 
     input:checked + .slider {
-      background: linear-gradient(135deg, var(--accent), var(--cyan));
-      box-shadow: 0 0 12px var(--accent-glow);
+      background-color: var(--accent);
+      box-shadow: 0 0 10px var(--accent-glow);
     }
 
     input:checked + .slider:before {
-      transform: translateX(22px);
+      transform: translateX(20px);
     }
 
-    .validation-card {
-      border-left: 4px solid var(--accent);
-      padding: 14px 18px;
-      background: rgba(59, 130, 246, 0.06);
-      border-radius: 0 12px 12px 0;
-      font-size: 13px;
-      line-height: 1.6;
-      margin-bottom: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      transition: all 0.3s;
-    }
-
-    .validation-card.ok {
-      border-left-color: var(--success);
-      background: rgba(16, 185, 129, 0.07);
-    }
-
-    .validation-card.error {
-      border-left-color: var(--error);
-      background: rgba(239, 68, 68, 0.07);
-    }
-
-    .validation-badges {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 4px;
-    }
-
-    .v-badge {
-      font-size: 11px;
-      padding: 3px 10px;
-      border-radius: 6px;
-      background: rgba(16, 20, 34, 0.8);
-      border: 1px solid var(--card-border);
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-
+    /* Scan Action Button */
     .btn-primary {
-      background: linear-gradient(135deg, var(--accent), #4f46e5);
-      border: none;
-      color: white;
-      padding: 14px 22px;
-      border-radius: 10px;
-      font-size: 15px;
+      background: linear-gradient(135deg, var(--accent), #75559e);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      color: #fff;
+      padding: 13px 22px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
       font-weight: 700;
+      letter-spacing: 0.2px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 10px;
-      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
       width: 100%;
-      position: relative;
-      overflow: hidden;
+      box-shadow: 0 4px 18px var(--accent-glow);
+      transition: all 0.2s var(--spring);
     }
 
-    .btn-primary::after {
-      content: '';
-      position: absolute;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background: linear-gradient(60deg, transparent, rgba(255, 255, 255, 0.15), transparent);
-      transform: rotate(30deg);
-      transition: transform 0.6s;
-    }
-
-    .btn-primary:hover::after {
-      transform: rotate(30deg) translate(20%, 20%);
-    }
-
-    .btn-primary:hover {
-      box-shadow: 0 8px 26px rgba(59, 130, 246, 0.6);
+    .btn-primary:hover:not(:disabled) {
+      background: linear-gradient(135deg, var(--accent-hover), #8665b1);
       transform: translateY(-1px);
+      box-shadow: 0 8px 26px var(--accent-glow);
     }
 
-    .btn-primary:active {
-      transform: translateY(1px);
+    .btn-primary:active:not(:disabled) {
+      transform: scale(0.98) translateY(1px);
     }
 
     .btn-primary:disabled {
-      opacity: 0.5;
+      opacity: 0.6;
       cursor: not-allowed;
-      transform: none;
-      box-shadow: none;
     }
 
+    .btn-actions-row {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .btn-danger {
+      background: rgba(224, 82, 82, 0.15);
+      border: 1px solid rgba(224, 82, 82, 0.4);
+      color: #FF8F8F;
+      padding: 13px 20px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      white-space: nowrap;
+      transition: all 0.2s var(--spring);
+    }
+
+    .btn-danger:hover {
+      background: var(--danger);
+      color: #fff;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px var(--danger-subtle);
+    }
+
+    .btn-danger:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary svg, .btn-danger svg {
+      stroke: currentColor;
+    }
+
+    @keyframes spinScan {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .spinning {
+      animation: spinScan 1.6s linear infinite;
+    }
+
+    /* Scan Progress & Live Micro-States */
     .progress-container {
       display: none;
       flex-direction: column;
-      gap: 10px;
-      padding: 16px;
-      background: rgba(16, 20, 34, 0.8);
-      border-radius: 10px;
-      border: 1px solid var(--card-border);
-      margin-top: 14px;
+      gap: 8px;
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid var(--surface-border);
+      animation: fadeIn 0.2s var(--spring);
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .progress-micro-state {
+      color: #CBB4E8;
+      font-family: ui-monospace, monospace;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
     .progress-bar-bg {
-      height: 8px;
-      background: #1c2238;
+      width: 100%;
+      height: 6px;
+      background: var(--surface-raised);
       border-radius: 6px;
       overflow: hidden;
-      position: relative;
     }
 
     .progress-bar-fill {
       height: 100%;
-      background: linear-gradient(90deg, var(--accent), var(--cyan), var(--success));
       width: 0%;
+      background: linear-gradient(90deg, var(--accent), #b497db);
+      border-radius: 6px;
       transition: width 0.3s ease;
-      box-shadow: 0 0 10px var(--cyan);
+      box-shadow: 0 0 12px var(--accent-glow);
     }
 
-    .progress-labels {
+    /* Tabs & Toolbar */
+    .toolbar-row {
       display: flex;
       justify-content: space-between;
-      font-size: 12px;
-      color: var(--muted);
-      font-weight: 500;
-    }
-
-    /* Tabs & Views */
-    .tab-bar {
-      display: flex;
-      gap: 6px;
-      border-bottom: 1px solid var(--card-border);
-      padding-bottom: 12px;
+      align-items: center;
       margin-bottom: 16px;
-    }
-
-    .tab-btn {
-      background: transparent;
-      border: none;
-      color: var(--muted);
-      font-size: 13px;
-      font-weight: 600;
-      padding: 8px 16px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .tab-btn:hover {
-      color: var(--text);
-      background: rgba(255, 255, 255, 0.05);
-    }
-
-    .tab-btn.active {
-      color: #fff;
-      background: rgba(59, 130, 246, 0.18);
-      border: 1px solid rgba(59, 130, 246, 0.35);
-      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
-    }
-
-    /* Cards Grid */
-    .cards-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
-      gap: 16px;
-    }
-
-    .switch-card {
-      background: rgba(16, 21, 38, 0.8);
-      border: 1px solid var(--card-border);
-      border-radius: 12px;
-      padding: 18px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      position: relative;
-      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
-    }
-
-    .switch-card:hover {
-      border-color: rgba(6, 182, 212, 0.5);
-      transform: translateY(-2px);
-      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35), 0 0 16px rgba(6, 182, 212, 0.15);
-    }
-
-    .card-top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-      padding-bottom: 10px;
-    }
-
-    .card-title {
-      font-size: 16px;
-      font-weight: 700;
-      color: #fff;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .badge-proto {
-      background: rgba(59, 130, 246, 0.2);
-      color: var(--cyan);
-      border: 1px solid rgba(6, 182, 212, 0.3);
-      padding: 3px 8px;
-      border-radius: 6px;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-    }
-
-    .badge-vlan {
-      background: rgba(245, 158, 11, 0.18);
-      color: var(--warning);
-      border: 1px solid rgba(245, 158, 11, 0.35);
-      padding: 3px 10px;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    .card-details {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
+      flex-wrap: wrap;
       gap: 12px;
     }
 
-    .detail-item {
+    .tab-bar {
       display: flex;
-      flex-direction: column;
-      gap: 3px;
+      background: var(--surface-raised);
+      border: 1px solid var(--surface-border);
+      padding: 4px;
+      border-radius: var(--radius-sm);
+      gap: 4px;
     }
 
-    .detail-item span.label {
-      color: var(--muted);
-      font-size: 10px;
-      text-transform: uppercase;
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      padding: 8px 16px;
+      font-size: 12px;
       font-weight: 700;
-      letter-spacing: 0.5px;
-    }
-
-    .detail-item span.value {
-      color: var(--text);
-      font-size: 13px;
-      font-weight: 500;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      display: flex;
-      align-items: center;
-      gap: 6px;
+      border-radius: 6px;
       cursor: pointer;
+      transition: all 0.2s var(--spring);
     }
 
-    .detail-item span.value:hover {
-      color: var(--cyan);
+    .tab-btn.active {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 10px var(--accent-glow);
     }
 
-    .card-footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding-top: 10px;
-      border-top: 1px solid rgba(255, 255, 255, 0.06);
-      font-size: 11px;
-      color: var(--muted);
+    .tab-btn:hover:not(.active) {
+      color: var(--text);
     }
 
-    /* Topology Map View */
-    #topologyView {
-      display: none;
-      padding: 20px;
-      background: rgba(12, 16, 28, 0.85);
-      border-radius: 12px;
-      border: 1px solid var(--card-border);
-      text-align: center;
-    }
-
-    .topology-flow {
+    /* Action Buttons */
+    .action-group {
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: 24px;
-      flex-wrap: wrap;
-      margin: 30px 0;
-    }
-
-    .topo-node {
-      background: #182038;
-      border: 1px solid rgba(91, 141, 239, 0.3);
-      padding: 16px 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-      min-width: 170px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      position: relative;
-    }
-
-    .topo-node::after {
-      content: '';
-      position: absolute;
-      inset: -1px;
-      border-radius: 13px;
-      background: linear-gradient(135deg, var(--accent), transparent);
-      z-index: -1;
-      opacity: 0.4;
-    }
-
-    .topo-arrow {
-      font-size: 24px;
-      color: var(--cyan);
-      animation: bounceX 1.5s infinite;
-    }
-
-    @keyframes bounceX {
-      0%, 100% { transform: translateX(0); }
-      50% { transform: translateX(6px); }
-    }
-
-    /* Actions and Buttons */
-    .download-dropdown {
-      position: relative;
-      display: inline-block;
+      gap: 8px;
     }
 
     .btn-secondary {
-      background: rgba(28, 36, 62, 0.7);
-      border: 1px solid var(--card-border);
+      background: var(--surface-raised);
+      border: 1px solid var(--surface-border);
       color: var(--text);
       padding: 8px 14px;
-      border-radius: 8px;
+      border-radius: var(--radius-sm);
       font-size: 12px;
       font-weight: 600;
       cursor: pointer;
       display: flex;
       align-items: center;
       gap: 6px;
-      transition: all 0.2s;
+      transition: all 0.2s var(--spring);
     }
 
     .btn-secondary:hover {
-      background: rgba(45, 57, 98, 0.9);
-      border-color: var(--cyan);
-      color: #fff;
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary:active {
+      transform: scale(0.97);
+    }
+
+    /* Dropdown */
+    .download-dropdown {
+      position: relative;
     }
 
     .dropdown-content {
       display: none;
       position: absolute;
       right: 0;
-      top: 105%;
-      background: #141a2e;
-      border: 1px solid var(--card-border);
-      border-radius: 10px;
+      top: 110%;
+      background: var(--surface-raised);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-sm);
       min-width: 190px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      box-shadow: 0 16px 32px rgba(0, 0, 0, 0.6);
       z-index: 200;
       overflow: hidden;
     }
@@ -686,12 +646,12 @@
       justify-content: space-between;
       font-size: 12px;
       font-weight: 500;
-      transition: background 0.2s;
+      transition: background 0.15s;
     }
 
     .dropdown-content a:hover {
-      background: rgba(59, 130, 246, 0.15);
-      color: var(--cyan);
+      background: var(--accent-subtle);
+      color: #A78BFA;
     }
 
     .show-dropdown {
@@ -699,31 +659,347 @@
       animation: fadeIn 0.15s ease-out;
     }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-6px); }
-      to { opacity: 1; transform: translateY(0); }
+    /* Switch Cards (Liquid Glass Compact - Strict 2 Cards per Row) */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
     }
 
-    /* Toast Notification */
+    @media (max-width: 580px) {
+      .cards-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .empty-state-card {
+      grid-column: 1 / -1;
+      width: 100%;
+      text-align: center;
+      padding: 56px 16px;
+      color: var(--text-dim);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .switch-card {
+      background: var(--surface-raised);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-md);
+      padding: 11px 13px;
+      box-shadow: var(--shadow-glass);
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      position: relative;
+      overflow: hidden;
+      animation: slideUp 0.25s var(--spring);
+      transition: transform 0.2s var(--spring), border-color 0.2s var(--spring);
+    }
+
+    .switch-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--surface-border-focus);
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(6px) scale(0.99); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .card-accent-bar {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3.5px;
+    }
+
+    .card-accent-bar.pass { background: var(--success); }
+    .card-accent-bar.warn { background: var(--warn); }
+    .card-accent-bar.fail { background: var(--danger); }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .switch-identity {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      overflow: hidden;
+      flex: 1;
+    }
+
+    .switch-identity h2 {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .switch-identity .switch-model {
+      font-size: 10px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .card-badges {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+
+    .badge-verdict {
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 9.5px;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+    }
+
+    .badge-verdict.pass { background: var(--success-subtle); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge-verdict.warn { background: var(--warn-subtle); color: var(--warn); border: 1px solid rgba(245, 158, 11, 0.3); }
+    .badge-verdict.fail { background: var(--danger-subtle); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); }
+
+    .badge-proto {
+      background: var(--accent-subtle);
+      color: #CBB4E8;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 9px;
+      font-weight: 700;
+    }
+
+    /* Side-by-Side Card Body (Horizontal Interior) */
+    .card-body-row {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+      gap: 8px;
+    }
+
+    .channels-column {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .channel-box {
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-sm);
+      padding: 5px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      position: relative;
+    }
+
+    .channel-box.data {
+      background: var(--data-subtle);
+      border-color: rgba(99, 147, 232, 0.25);
+    }
+
+    .channel-box.voice {
+      background: var(--voice-subtle);
+      border-color: rgba(163, 133, 206, 0.25);
+    }
+
+    .channel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 8.5px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+
+    .channel-box.data .channel-header { color: var(--data-color); }
+    .channel-box.voice .channel-header { color: var(--voice-color); }
+
+    .channel-vlan {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--text);
+      font-family: ui-monospace, monospace;
+      line-height: 1.2;
+    }
+
+    .channel-meta {
+      font-size: 9px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Details Column inside Card */
+    .details-column {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: rgba(0, 0, 0, 0.16);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-sm);
+      padding: 6px 8px;
+      gap: 3px;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 10px;
+    }
+
+    .detail-row .label {
+      font-size: 8.5px;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .detail-row .value {
+      font-size: 10.5px;
+      font-weight: 600;
+      color: var(--text);
+      font-family: ui-monospace, monospace;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .detail-row .value:hover {
+      color: var(--accent);
+    }
+
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 9.5px;
+      color: var(--text-dim);
+      padding-top: 3px;
+      border-top: 1px solid var(--surface-border);
+    }
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--text-dim);
+      padding-top: 6px;
+      border-top: 1px solid var(--surface-border);
+    }
+
+    /* Topology Graph View */
+    #topologyView {
+      display: none;
+      min-height: 440px;
+      position: relative;
+    }
+
+    #topoCanvas {
+      width: 100%;
+      height: 440px;
+      background: var(--surface-raised);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-md);
+      display: block;
+    }
+
+    /* Settings Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(12px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+      animation: fadeIn 0.2s var(--spring);
+    }
+
+    .modal-card {
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header h3 {
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    .shortcut-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--surface-border);
+    }
+
+    .shortcut-kbd {
+      background: var(--surface-raised);
+      border: 1px solid var(--surface-border);
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    /* Toast */
     #toast {
       position: fixed;
       bottom: 24px;
       right: 24px;
-      background: #182038;
-      border: 1px solid var(--cyan);
+      background: var(--surface);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--accent);
       color: #fff;
       padding: 12px 20px;
-      border-radius: 10px;
+      border-radius: 12px;
       font-size: 13px;
       font-weight: 600;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 16px rgba(6, 182, 212, 0.3);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px var(--accent-glow);
       display: flex;
       align-items: center;
       gap: 10px;
-      z-index: 999;
-      transform: translateY(100px);
+      z-index: 9999;
+      transform: translateY(80px);
       opacity: 0;
-      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: all 0.25s var(--spring);
       pointer-events: none;
     }
 
@@ -731,81 +1007,133 @@
       transform: translateY(0);
       opacity: 1;
     }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.96); }
+      to { opacity: 1; transform: scale(1); }
+    }
   </style>
 </head>
 <body>
-  <canvas id="radarCanvas"></canvas>
+  <canvas id="pulseCanvas"></canvas>
 
   <header>
     <div class="brand">
-      <img src="/logo.png" alt="SRE Logo" style="width: 38px; height: 38px; border-radius: 10px; box-shadow: 0 0 20px var(--accent-glow); object-fit: contain;">
+      <div class="brand-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+          <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+          <line x1="6" y1="6" x2="6.01" y2="6"></line>
+          <line x1="6" y1="18" x2="6.01" y2="18"></line>
+        </svg>
+      </div>
       <div class="brand-text">
-        <h1>SRE Network Discovery <span class="version-tag">PRO v2.0.2</span></h1>
-        <p>Switch Reconnaissance & Link Topology Engine</p>
+        <h1>SRE Network Discovery <span class="version-badge">v2.1.0</span></h1>
+        <p data-i18n="subtitle">Switch Reconnaissance & Dual-VLAN Discovery</p>
       </div>
     </div>
     <div class="header-actions">
-      <div class="status-badge" id="appStatus">
-        <div class="status-dot"></div>
-        <span id="appStatusText">Listo</span>
-      </div>
+      <button class="btn-icon" onclick="toggleLanguage()" title="Cambiar Idioma (ES / EN)">
+        <span id="langLabel" style="font-size: 11px; font-weight: 800;">ES</span>
+      </button>
+      <button class="btn-icon" onclick="openSettings()" title="Ajustes (Ctrl+K)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="4" y1="21" x2="4" y2="14"></line>
+          <line x1="4" y1="10" x2="4" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12" y2="3"></line>
+          <line x1="20" y1="21" x2="20" y2="16"></line>
+          <line x1="20" y1="12" x2="20" y2="3"></line>
+          <line x1="1" y1="14" x2="7" y2="14"></line>
+          <line x1="9" y1="8" x2="15" y2="8"></line>
+          <line x1="17" y1="16" x2="23" y2="16"></line>
+        </svg>
+      </button>
     </div>
   </header>
 
   <main>
+    <!-- Scan Parameters Panel -->
     <div class="glass-panel">
-      <div class="form-group">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <label for="adapterSelect">Interfaz de Red Física (Ethernet / Conexiones)</label>
-          <button type="button" onclick="loadAdapters()" style="background: none; border: none; color: var(--cyan); cursor: pointer; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px;">
-            <span>🔄</span> <span>Actualizar adaptadores</span>
-          </button>
+      <div class="form-row">
+        <div class="form-group">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <label for="adapterSelect" data-i18n="labelAdapter">Interfaz de Red Física (Ethernet)</label>
+            <button type="button" onclick="loadAdapters()" style="background: none; border: none; color: var(--accent); cursor: pointer; font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 5px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <polyline points="1 20 1 14 7 14"></polyline>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+              </svg>
+              <span data-i18n="btnRefresh">Refrescar</span>
+            </button>
+          </div>
+          <select id="adapterSelect"></select>
         </div>
-        <select id="adapterSelect"></select>
+        <div class="form-group">
+          <label for="tagInput" data-i18n="labelTag">Toma / Roseta / Ticket (Opcional)</label>
+          <input type="text" id="tagInput" placeholder="Ej: Roseta 14 - Piso 2" data-i18n-placeholder="tagPlaceholder">
+        </div>
       </div>
 
+      <!-- Network Link Validation Card -->
       <div class="validation-card" id="validationCard">
-        <div style="font-weight: 700;" id="valSummary">Comprobando enlace de red...</div>
+        <div class="validation-header">
+          <span class="val-title" id="valSummary" data-i18n="validating">Comprobando enlace de red...</span>
+          <span id="carrierIndicator" style="font-size: 12px; font-weight: 700;"></span>
+        </div>
         <div class="validation-badges" id="valBadges"></div>
       </div>
 
+      <!-- Toggles Grid -->
       <div class="controls-grid">
         <div class="toggle-card">
-          <span>Modo Acumulativo (-a)</span>
+          <span data-i18n="toggleAppend">Modo Acumulativo (-a)</span>
           <label class="switch">
             <input type="checkbox" id="appendToggle" checked>
             <span class="slider"></span>
           </label>
         </div>
         <div class="toggle-card">
-          <span>Auto-Extracción de datos</span>
+          <span data-i18n="toggleAuto">Auto-Extracción al Enchufar</span>
           <label class="switch">
             <input type="checkbox" id="autoToggle" checked>
             <span class="slider"></span>
           </label>
         </div>
-      </div>
-
-      <div class="controls-grid" style="margin-top: 12px; margin-bottom: 16px;">
         <div class="form-group" style="margin-bottom: 0;">
-          <label for="durationInput">Duración de Escucha (segundos)</label>
+          <label for="durationInput" data-i18n="labelDuration">Ventana de Captura (segundos)</label>
           <input type="number" id="durationInput" value="62" min="10" max="300">
         </div>
-        <div class="form-group" style="margin-bottom: 0;">
-          <label for="remoteUrlInput">Canal Seguro Remoto HTTPS (Opcional)</label>
-          <input type="text" id="remoteUrlInput" placeholder="https://sre.empresa.com/api/v1/topology">
-        </div>
       </div>
 
-      <button class="btn-primary" id="startBtn" onclick="toggleScan()">
-        <span id="btnIcon">⚡</span>
-        <span id="btnText">Iniciar Reconocimiento de Punto de Red</span>
-      </button>
+      <!-- Action Buttons Row -->
+      <div class="btn-actions-row">
+        <button class="btn-primary" id="startBtn" onclick="toggleScan()">
+          <svg id="btnIconSvg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M4.93 4.93a10 10 0 0 1 14.14 0"></path>
+            <path d="M7.76 7.76a6 6 0 0 1 8.48 0"></path>
+            <path d="M4.93 19.07a10 10 0 0 1 0-14.14"></path>
+            <path d="M7.76 16.24a6 6 0 0 1 0-8.48"></path>
+          </svg>
+          <span id="btnText" data-i18n="btnStart">Iniciar Reconocimiento de Punto de Red</span>
+        </button>
+        <button class="btn-danger" id="stopBtn" onclick="stopScan()" style="display: none;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+          </svg>
+          <span data-i18n="btnStop">Detener</span>
+        </button>
+      </div>
 
+      <!-- Scan Progress Container with Micro-States -->
       <div class="progress-container" id="progressContainer">
-        <div class="progress-labels">
-          <span id="progressStatus">Capturando tramas L2 (CDP / LLDP)...</span>
-          <span id="progressTimer">0s / 62s</span>
+        <div class="progress-header">
+          <span class="progress-micro-state" id="progressStatus">
+            <span class="status-dot"></span> <span id="microStateText">Escuchando tramas L2...</span>
+          </span>
+          <span id="progressTimer" style="font-family: monospace;">0s / 62s</span>
         </div>
         <div class="progress-bar-bg">
           <div class="progress-bar-fill" id="progressBarFill"></div>
@@ -813,149 +1141,315 @@
       </div>
     </div>
 
+    <!-- Inventory & Results Panel -->
     <div class="glass-panel">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-        <div class="tab-bar" style="margin-bottom: 0; padding-bottom: 0; border-bottom: none;">
-          <button class="tab-btn active" id="tabCards" onclick="setTab('cards')">Tarjetas (<span id="countDevices">0</span>)</button>
-          <button class="tab-btn" id="tabTopology" onclick="setTab('topology')">Mapa Topológico</button>
-          <button class="tab-btn" id="tabText" onclick="setTab('text')">JSON Raw</button>
+      <div class="toolbar-row">
+        <div class="tab-bar">
+          <button class="tab-btn active" id="tabCards" onclick="setTab('cards')">
+            <span data-i18n="tabCards">Tarjetas</span> (<span id="countDevices">0</span>)
+          </button>
+          <button class="tab-btn" id="tabTopology" onclick="setTab('topology')" data-i18n="tabTopology">
+            Grafo de Topología
+          </button>
+          <button class="tab-btn" id="tabText" onclick="setTab('text')" data-i18n="tabRaw">
+            JSON Raw
+          </button>
         </div>
 
-        <div style="display: flex; gap: 8px;">
+        <div class="action-group">
           <div class="download-dropdown">
             <button class="btn-secondary" onclick="toggleDownloadMenu()">
-              <span>📥 Descargar Reporte</span>
-              <span style="font-size: 9px;">▼</span>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              <span data-i18n="btnDownload">Descargar Reporte</span>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
             </button>
             <div class="dropdown-content" id="downloadMenu">
               <a href="/api/export?format=json" download="sre_network_inventory.json">
                 <span>JSON Estructurado</span>
-                <span style="color: var(--cyan);">.json</span>
+                <span style="color: var(--accent);">.json</span>
               </a>
               <a href="/api/export?format=md" download="sre_network_inventory.md">
-                <span>Reporte Markdown</span>
-                <span style="color: var(--cyan);">.md</span>
+                <span>Reporte Markdown (Cápsula)</span>
+                <span style="color: var(--accent);">.md</span>
               </a>
               <a href="/api/export?format=csv" download="sre_network_inventory.csv">
-                <span>Planilla de Cálculo</span>
-                <span style="color: var(--cyan);">.csv</span>
+                <span>Planilla CSV</span>
+                <span style="color: var(--accent);">.csv</span>
               </a>
             </div>
           </div>
-          <button class="btn-secondary" onclick="clearResults()">Limpiar</button>
+          <button class="btn-secondary" onclick="clearResults()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            <span data-i18n="btnClear">Limpiar</span>
+          </button>
         </div>
       </div>
 
+      <!-- Cards Grid -->
       <div id="cardsView" class="cards-grid">
-        <div style="grid-column: 1 / -1; text-align: center; padding: 48px 16px; color: var(--muted); font-size: 13px;">
-          No hay switches registrados aún.<br>Inicie un escaneo para escuchar anuncios del switch conectado.
+        <div class="empty-state-card" data-i18n="emptyState">
+          No hay switches registrados aún.<br>Conecte el cable e inicie el reconocimiento para capturar anuncios CDP/LLDP.
         </div>
       </div>
 
-      <div id="topologyView">
-        <h3 style="font-size: 15px; color: #fff; margin-bottom: 6px;">Topología Punto a Punto Detectada</h3>
-        <p style="font-size: 12px; color: var(--muted);">Trazado lógico desde la tarjeta física del host hasta el switch de acceso.</p>
-        <div class="topology-flow" id="topoFlow"></div>
+      <!-- Topology Graph Canvas View -->
+      <div id="topologyView" style="display: none;">
+        <canvas id="topoCanvas"></canvas>
       </div>
 
+      <!-- Raw JSON View -->
       <div id="textView" style="display: none;">
-        <textarea id="rawText" readonly style="width: 100%; height: 280px; background: rgba(14, 18, 32, 0.9); border: 1px solid var(--card-border); color: #93c5fd; padding: 14px; border-radius: 10px; font-family: ui-monospace, monospace; font-size: 12px; outline: none;"></textarea>
+        <textarea id="rawText" readonly style="width: 100%; height: 320px; background: var(--bg); border: 1px solid var(--surface-border); color: #C4B5FD; padding: 14px; border-radius: var(--radius-sm); font-family: ui-monospace, monospace; font-size: 12px; outline: none;"></textarea>
       </div>
     </div>
   </main>
 
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settingsModal" onclick="closeSettings(event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3 data-i18n="settingsTitle">Ajustes & Configuración</h3>
+        <button class="btn-icon" onclick="closeSettings()" style="width: 28px; height: 28px;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+
+      <div class="form-group">
+        <label data-i18n="themeLabel">Tema Visual</label>
+        <select id="themeSelect" onchange="changeTheme(this.value)">
+          <option value="obsidian">Obsidian Liquid Glass (Predeterminado)</option>
+          <option value="high-contrast">High Contrast Field Lab</option>
+          <option value="clean-slate">Clean Slate (Tema Claro)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label data-i18n="shortcutsLabel">Atajos de Teclado</label>
+        <div class="shortcut-row">
+          <span data-i18n="shortcutScan">Iniciar / Pausar Escaneo</span>
+          <span class="shortcut-kbd">Espacio</span>
+        </div>
+        <div class="shortcut-row">
+          <span data-i18n="shortcutExport">Exportar Reporte</span>
+          <span class="shortcut-kbd">Ctrl + E</span>
+        </div>
+        <div class="shortcut-row">
+          <span data-i18n="shortcutTopo">Alternar Topología / Tarjetas</span>
+          <span class="shortcut-kbd">Ctrl + T</span>
+        </div>
+        <div class="shortcut-row">
+          <span data-i18n="shortcutSettings">Ajustes</span>
+          <span class="shortcut-kbd">Ctrl + K</span>
+        </div>
+      </div>
+
+      <div style="font-size: 11px; color: var(--text-dim); text-align: center;">
+        SRE Network Discovery Studio v2.1.0 • Motor Nativo Go • Cero Dependencias
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Element -->
   <div id="toast">
-    <span id="toastIcon">📋</span>
-    <span id="toastMsg">Copiado al portapapeles</span>
+    <div id="toastIconWrapper" style="display: flex; align-items: center;"></div>
+    <span id="toastMsg">Notificación</span>
   </div>
 
   <script>
-    // --- Global Application State (Declared at top to prevent TDZ ReferenceErrors) ---
+    // --- Internationalization Dictionary (i18n) ---
+    let currentLang = localStorage.getItem('sre_lang') || 'es';
+
+    const i18n = {
+      es: {
+        subtitle: "Reconocimiento de Switches y Descubrimiento Dual-VLAN",
+        statusReady: "Listo",
+        statusScanning: "Escaneando",
+        labelAdapter: "Interfaz de Red Física (Ethernet)",
+        btnRefresh: "Refrescar",
+        labelTag: "Toma / Roseta / Ticket (Opcional)",
+        tagPlaceholder: "Ej: Roseta 14 - Piso 2",
+        validating: "Comprobando enlace de red...",
+        toggleAppend: "Modo Acumulativo (-a)",
+        toggleAuto: "Auto-Extracción al Enchufar",
+        labelDuration: "Ventana de Captura (segundos)",
+        btnStart: "Iniciar Reconocimiento de Punto de Red",
+        btnScanning: "Escuchando tramas en el cable...",
+        btnStop: "Detener",
+        tabCards: "Tarjetas",
+        tabTopology: "Grafo de Topología",
+        tabRaw: "JSON Raw",
+        btnDownload: "Descargar Reporte",
+        btnClear: "Limpiar",
+        emptyState: "No hay switches registrados aún.<br>Conecte el cable e inicie el reconocimiento para capturar anuncios CDP/LLDP.",
+        settingsTitle: "Ajustes & Configuración",
+        themeLabel: "Tema Visual",
+        shortcutsLabel: "Atajos de Teclado",
+        shortcutScan: "Iniciar / Pausar Escaneo",
+        shortcutExport: "Exportar Reporte",
+        shortcutTopo: "Alternar Topología / Tarjetas",
+        shortcutSettings: "Ajustes",
+        dataChannel: "CANAL DE DATOS",
+        voiceChannel: "CANAL DE VOZ (VoIP)",
+        switchPort: "Puerto Switch",
+        mgmtIP: "IP de Gestión",
+        hwModel: "Modelo Hardware",
+        localAdapter: "Adaptador Local",
+        chassisMAC: "MAC / Chassis ID",
+        accumulated: "Detecciones",
+        noVoice: "Sin VLAN de voz",
+        nativeVlan: "Nativa / Trunk",
+        micro1: "Inicializando captura y sondeando interfaz...",
+        micro2: "Superando ventana Spanning Tree (STP)...",
+        micro3: "Escuchando anuncios de capa 2 (CDP / LLDP-MED)...",
+        micro4: "Extrayendo políticas de voz y telemetría de switch...",
+        micro5: "Sintetizando inventario y deduplicando puntos..."
+      },
+      en: {
+        subtitle: "Switch Reconnaissance & Dual-VLAN Discovery",
+        statusReady: "Ready",
+        statusScanning: "Scanning",
+        labelAdapter: "Physical Network Interface (Ethernet)",
+        btnRefresh: "Refresh",
+        labelTag: "Outlet / Rosette / Ticket (Optional)",
+        tagPlaceholder: "e.g. Outlet 14 - Floor 2",
+        validating: "Checking network link carrier...",
+        toggleAppend: "Cumulative Mode (-a)",
+        toggleAuto: "Auto-Extract on Cable Plug",
+        labelDuration: "Capture Window (seconds)",
+        btnStart: "Start Network Point Reconnaissance",
+        btnScanning: "Listening for wire frames...",
+        btnStop: "Stop Scan",
+        tabCards: "Cards",
+        tabTopology: "Topology Graph",
+        tabRaw: "Raw JSON",
+        btnDownload: "Export Report",
+        btnClear: "Clear",
+        emptyState: "No switches discovered yet.<br>Plug the cable and start scanning to capture CDP/LLDP advertisements.",
+        settingsTitle: "Settings & Configuration",
+        themeLabel: "Visual Theme",
+        shortcutsLabel: "Keyboard Shortcuts",
+        shortcutScan: "Start / Pause Scan",
+        shortcutExport: "Export Report",
+        shortcutTopo: "Toggle Topology / Cards",
+        shortcutSettings: "Settings",
+        dataChannel: "DATA CHANNEL",
+        voiceChannel: "VOICE CHANNEL (VoIP)",
+        switchPort: "Switch Port",
+        mgmtIP: "Management IP",
+        hwModel: "Hardware Model",
+        localAdapter: "Local Adapter",
+        chassisMAC: "MAC / Chassis ID",
+        accumulated: "Seen Count",
+        noVoice: "No Voice VLAN",
+        nativeVlan: "Native / Trunk",
+        micro1: "Initializing capture and probing interface...",
+        micro2: "Clearing Spanning Tree (STP) broadcast window...",
+        micro3: "Listening for Layer 2 frames (CDP / LLDP-MED)...",
+        micro4: "Extracting Voice policies and switch telemetry...",
+        micro5: "Synthesizing inventory and deduplicating endpoints..."
+      }
+    };
+
+    function t(key) {
+      return (i18n[currentLang] && i18n[currentLang][key]) || key;
+    }
+
+    function applyTranslations() {
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const k = el.getAttribute('data-i18n');
+        el.innerHTML = t(k);
+      });
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const k = el.getAttribute('data-i18n-placeholder');
+        el.placeholder = t(k);
+      });
+      document.getElementById('langLabel').textContent = currentLang.toUpperCase();
+    }
+
+    function toggleLanguage() {
+      currentLang = currentLang === 'es' ? 'en' : 'es';
+      localStorage.setItem('sre_lang', currentLang);
+      applyTranslations();
+      renderDevices();
+    }
+
+    // --- State Variables ---
     let isScanning = false;
     let timerInterval = null;
     let currentInventory = { devices: [] };
 
-    // --- Canvas Radar Scanner Effect ---
-    const canvas = document.getElementById('radarCanvas');
-    const ctx = canvas.getContext('2d');
-    let angle = 0;
-    let blips = [];
+    // --- Watchdog Heartbeat (Ensures clean Go shutdown upon window close) ---
+    setInterval(() => {
+      fetch('/api/ping').catch(() => {});
+    }, 2000);
 
-    function resizeCanvas() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+    window.addEventListener('beforeunload', () => {
+      navigator.sendBeacon('/api/shutdown');
+    });
+
+    // --- Real-Time Signal Pulse Canvas ---
+    const pCanvas = document.getElementById('pulseCanvas');
+    const pCtx = pCanvas.getContext('2d');
+    let pWidth, pHeight;
+    let pulseStep = 0;
+
+    function resizePulseCanvas() {
+      pWidth = pCanvas.width = window.innerWidth;
+      pHeight = pCanvas.height = window.innerHeight;
     }
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
+    window.addEventListener('resize', resizePulseCanvas);
+    resizePulseCanvas();
 
-    function drawRadar() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const cx = canvas.width / 2;
-      const cy = canvas.height / 2;
-      const maxRadius = Math.max(canvas.width, canvas.height) * 0.7;
+    function drawPulse() {
+      pCtx.clearRect(0, 0, pWidth, pHeight);
+      pCtx.lineWidth = 1.5;
+      pCtx.strokeStyle = isScanning ? 'rgba(134, 102, 176, 0.45)' : 'rgba(255, 255, 255, 0.04)';
 
-      ctx.strokeStyle = 'rgba(59, 130, 246, 0.05)';
-      ctx.lineWidth = 1;
-      for (let r = 80; r < maxRadius; r += 120) {
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, Math.PI * 2);
-        ctx.stroke();
-      }
+      pCtx.beginPath();
+      const midY = pHeight * 0.4;
+      pCtx.moveTo(0, midY);
 
-      if (isScanning) {
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.rotate(angle);
-        const grad = ctx.createLinearGradient(0, 0, maxRadius, 0);
-        grad.addColorStop(0, 'rgba(6, 182, 212, 0.25)');
-        grad.addColorStop(1, 'transparent');
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.arc(0, 0, maxRadius, 0, Math.PI / 4);
-        ctx.fill();
-        ctx.restore();
-
-        angle += 0.035;
-
-        if (Math.random() < 0.03) {
-          blips.push({
-            x: cx + (Math.random() - 0.5) * maxRadius * 1.2,
-            y: cy + (Math.random() - 0.5) * maxRadius * 1.2,
-            alpha: 1
-          });
+      for (let x = 0; x < pWidth; x += 15) {
+        let wave = Math.sin((x * 0.015) + pulseStep) * 6;
+        if (isScanning) {
+          wave += (Math.random() - 0.5) * 14;
         }
+        pCtx.lineTo(x, midY + wave);
+      }
+      pCtx.stroke();
+      pulseStep += isScanning ? 0.08 : 0.015;
+      requestAnimationFrame(drawPulse);
+    }
+    drawPulse();
+
+    // --- Toast & Copy Helpers ---
+    function showToast(msg, type = 'info') {
+      const toast = document.getElementById('toast');
+      const iconWrapper = document.getElementById('toastIconWrapper');
+      document.getElementById('toastMsg').textContent = msg;
+
+      if (type === 'success' || type === 'zap') {
+        iconWrapper.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+        toast.style.borderColor = 'var(--accent)';
+      } else if (type === 'warn' || type === 'warning') {
+        iconWrapper.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
+        toast.style.borderColor = 'var(--warn)';
+      } else if (type === 'error') {
+        iconWrapper.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>`;
+        toast.style.borderColor = 'var(--danger)';
+      } else {
+        iconWrapper.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`;
+        toast.style.borderColor = 'var(--accent)';
       }
 
-      blips.forEach((b, idx) => {
-        ctx.fillStyle = `rgba(6, 182, 212, ${b.alpha})`;
-        ctx.shadowColor = '#06b6d4';
-        ctx.shadowBlur = 10;
-        ctx.beginPath();
-        ctx.arc(b.x, b.y, 3, 0, Math.PI * 2);
-        ctx.fill();
-        b.alpha -= 0.015;
-        if (b.alpha <= 0) blips.splice(idx, 1);
-      });
-      ctx.shadowBlur = 0;
-
-      requestAnimationFrame(drawRadar);
-    }
-    drawRadar();
-
-    // --- Handlers & API Calls ---
-
-    function showToast(msg, icon = '📋') {
-      const toast = document.getElementById('toast');
-      document.getElementById('toastMsg').textContent = msg;
-      document.getElementById('toastIcon').textContent = icon;
       toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 2200);
+      setTimeout(() => toast.classList.remove('show'), 2400);
     }
 
     function copyText(txt) {
+      if (!txt || txt === '-') return;
       navigator.clipboard.writeText(txt).then(() => {
-        showToast(`Copiado: ${txt}`);
+        showToast(currentLang === 'es' ? `Copiado: ${txt}` : `Copied: ${txt}`);
       });
     }
 
@@ -969,36 +1463,49 @@
       }
     };
 
-    async function loadAdapters() {
+    // --- Adapter Loading & Link Validation ---
+    async function loadAdapters(preserveSelection = true) {
       try {
+        const sel = document.getElementById('adapterSelect');
+        const prevValue = preserveSelection && sel ? sel.value : '';
         const res = await fetch('/api/adapters');
         const adapters = await res.json();
-        const sel = document.getElementById('adapterSelect');
+
         sel.innerHTML = '';
         if (!adapters || adapters.length === 0) {
           const opt = document.createElement('option');
           opt.value = '';
-          opt.textContent = '⚠️ No se detectaron interfaces de red físicas';
+          opt.textContent = currentLang === 'es' ? 'Sin interfaces físicas detectadas' : 'No physical network interfaces';
           sel.appendChild(opt);
-          const card = document.getElementById('validationCard');
-          const sum = document.getElementById('valSummary');
-          const badges = document.getElementById('valBadges');
-          card.className = 'validation-card error';
-          sum.textContent = 'No se detectaron adaptadores de red disponibles en el sistema.';
-          badges.innerHTML = '';
           return;
         }
-        adapters.forEach(a => {
+
+        let foundPrev = false;
+        let firstUpIndex = -1;
+
+        adapters.forEach((a, idx) => {
           const opt = document.createElement('option');
           opt.value = a.name;
           opt.textContent = `${a.name} (${a.is_up ? 'CARRIER UP' : 'DOWN'}) - MAC: ${a.mac}`;
+          if (a.name === prevValue) {
+            opt.selected = true;
+            foundPrev = true;
+          }
+          if (a.is_up && firstUpIndex === -1) {
+            firstUpIndex = idx;
+          }
           sel.appendChild(opt);
         });
-        if (adapters.length > 0) {
+
+        if (!foundPrev && firstUpIndex !== -1) {
+          sel.selectedIndex = firstUpIndex;
+        }
+
+        if (!isScanning) {
           validateSelected();
         }
       } catch (err) {
-        console.error("Error cargando adaptadores:", err);
+        console.error("Error loading adapters:", err);
       }
     }
 
@@ -1007,37 +1514,51 @@
       const adapter = sel ? sel.value : '';
       if (!adapter) return;
 
-      const remote = document.getElementById('remoteUrlInput').value;
       const card = document.getElementById('validationCard');
       const sum = document.getElementById('valSummary');
       const badges = document.getElementById('valBadges');
+      const ind = document.getElementById('carrierIndicator');
 
       try {
-        const res = await fetch(`/api/validate?adapter=${encodeURIComponent(adapter)}&remote=${encodeURIComponent(remote)}`);
+        const res = await fetch(`/api/validate?adapter=${encodeURIComponent(adapter)}`);
         const v = await res.json();
         card.className = 'validation-card ' + (v.is_up ? 'ok' : 'error');
         sum.textContent = v.status_summary;
+        ind.innerHTML = `<span class="carrier-indicator ${v.is_up ? 'up' : 'down'}"><span class="dot"></span> ${v.is_up ? 'CARRIER UP' : 'CARRIER DOWN'}</span>`;
 
         badges.innerHTML = `
-          <div class="v-badge"><span>🔌 Enlace Físico:</span> <strong>${v.is_up ? 'CONECTADO' : 'DESCONECTADO'}</strong></div>
-          <div class="v-badge"><span>🌐 IP:</span> <strong>${v.ipv4_addresses && v.ipv4_addresses.length ? v.ipv4_addresses.join(', ') : 'Sin IP (VLAN Aislada o sin DHCP)'}</strong></div>
-          <div class="v-badge"><span>🚪 Gateway:</span> <strong>${v.gateway || 'N/A'} (${v.gateway_alive ? 'Activo' : 'Inalcanzable'})</strong></div>
-          <div class="v-badge"><span>📡 DNS:</span> <strong>${v.dns_resolving ? 'Operativo' : 'Sin salida'}</strong></div>
-          <div class="v-badge"><span>🔒 Canal Seguro TLS:</span> <strong>${v.secure_channel_ok ? 'Conectado' : 'Sin conexión externa'}</strong></div>
+          <div class="v-chip"><svg class="v-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg> <span>Carrier:</span> <strong>${v.is_up ? 'UP' : 'DOWN'}</strong></div>
+          <div class="v-chip"><svg class="v-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> <span>IP:</span> <strong>${v.ipv4_addresses && v.ipv4_addresses.length ? v.ipv4_addresses.join(', ') : (currentLang === 'es' ? 'Sin IP' : 'No IP')}</strong></div>
+          <div class="v-chip"><svg class="v-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg> <span>Gateway:</span> <strong>${v.gateway || 'N/A'} (${v.gateway_alive ? 'OK' : 'FAIL'})</strong></div>
+          <div class="v-chip"><svg class="v-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.2 19.1 19.1"/></svg> <span>DNS:</span> <strong>${v.dns_resolving ? 'OK' : 'FAIL'}</strong></div>
+          <div class="v-chip"><svg class="v-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> <span>TLS:</span> <strong>${v.secure_channel_ok ? 'OK' : 'FAIL'}</strong></div>
         `;
+
+        const autoEnabled = document.getElementById('autoToggle')?.checked;
+        const isInitialOpen = (lastCarrierUp === null);
+        lastCarrierUp = v.is_up;
+
+        if (isInitialOpen && v.is_up === true && autoEnabled && !isScanning) {
+          showToast(currentLang === 'es' ? "Enlace detectado al inicio. Auto-extracción..." : "Link detected on launch. Auto-extracting...", "success");
+          setTimeout(() => { if (!isScanning) toggleScan(); }, 800);
+        }
       } catch (err) {
         card.className = 'validation-card error';
-        sum.textContent = 'Error al verificar enlace de red.';
+        sum.textContent = currentLang === 'es' ? 'Error al verificar enlace.' : 'Link verification error.';
       }
     }
 
     document.getElementById('adapterSelect').addEventListener('change', validateSelected);
 
+    // --- Inventory & Devices Rendering ---
     async function loadInventory() {
       try {
         const res = await fetch('/api/inventory');
         currentInventory = await res.json();
         renderDevices();
+        if (document.getElementById('tabTopology')?.classList.contains('active')) {
+          drawTopologyGraph();
+        }
       } catch (err) {
         console.error(err);
       }
@@ -1047,15 +1568,13 @@
       const container = document.getElementById('cardsView');
       const raw = document.getElementById('rawText');
       const count = document.getElementById('countDevices');
-      const topoFlow = document.getElementById('topoFlow');
       const devices = currentInventory.devices || [];
 
       count.textContent = devices.length;
       raw.value = JSON.stringify(currentInventory, null, 2);
 
       if (devices.length === 0) {
-        container.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 48px 16px; color: var(--muted); font-size: 13px;">No hay switches registrados aún.<br>Inicie un escaneo para escuchar anuncios del switch conectado.</div>`;
-        topoFlow.innerHTML = `<p style="color: var(--muted); font-size: 13px;">Realice un escaneo para mapear el switch y puerto conectado a este host.</p>`;
+        container.innerHTML = `<div class="empty-state-card">${t('emptyState')}</div>`;
         return;
       }
 
@@ -1063,96 +1582,224 @@
       devices.forEach(d => {
         const card = document.createElement('div');
         card.className = 'switch-card';
+
+        const verdict = d.verdict || 'PASS';
+        const verdictLower = verdict.toLowerCase();
+
+        const dataVlanText = d.vlan ? `VLAN ${d.vlan}` : t('nativeVlan');
+        const voiceVlanText = d.voice_vlan ? `VLAN ${d.voice_vlan}` : t('noVoice');
+        const voiceTaggedStr = d.voice_tagged ? 'Tagged 802.1Q' : 'Untagged';
+
         card.innerHTML = `
+          <div class="card-accent-bar ${verdictLower}"></div>
           <div class="card-top">
-            <div class="card-title">
-              <span onclick="copyText('${escapeHtml(d.switch_name || 'Switch Desconocido')}')" title="Copiar nombre">${escapeHtml(d.switch_name || 'Switch Desconocido')}</span>
-              <span class="badge-proto">${d.protocol}</span>
+            <div class="switch-identity">
+              <h2 onclick="copyText('${escapeHtml(d.switch_name)}')">
+                ${escapeHtml(d.switch_name || 'Switch')}
+                <span class="badge-proto">${d.protocol}</span>
+                ${d.tag ? `• <span style="color: #CBB4E8; font-weight:700;"><svg class="v-icon" style="width:10px; height:10px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg> ${escapeHtml(d.tag)}</span>` : ''}
+              </h2>
+              <span class="switch-model">${escapeHtml(d.model || d.system_description || 'Switch Hardware')}</span>
             </div>
-            ${d.vlan ? `<span class="badge-vlan">VLAN ${d.vlan}</span>` : '<span style="color: var(--muted); font-size: 11px;">VLAN Nativa / No anunciada</span>'}
-          </div>
-          <div class="card-details">
-            <div class="detail-item">
-              <span class="label">Puerto Switch</span>
-              <span class="value" onclick="copyText('${escapeHtml(d.port || d.port_description || '')}')" title="Copiar">${escapeHtml(d.port || d.port_description || '-')} 📋</span>
-            </div>
-            <div class="detail-item">
-              <span class="label">IP de Gestión</span>
-              <span class="value" onclick="copyText('${escapeHtml(d.switch_ip || '')}')" title="Copiar">${escapeHtml(d.switch_ip || 'No anunciada')} 📋</span>
-            </div>
-            <div class="detail-item">
-              <span class="label">Modelo Hardware</span>
-              <span class="value">${escapeHtml(d.model || d.system_description || '-')}</span>
-            </div>
-            <div class="detail-item">
-              <span class="label">Adaptador Local</span>
-              <span class="value">${escapeHtml(d.local_adapter || '-')}</span>
-            </div>
-            <div class="detail-item">
-              <span class="label">MAC / Chassis ID</span>
-              <span class="value" onclick="copyText('${escapeHtml(d.chassis_id || '')}')">${escapeHtml(d.chassis_id || '-')}</span>
-            </div>
-            <div class="detail-item">
-              <span class="label">Detecciones Acumuladas</span>
-              <span class="value" style="color: var(--cyan);">${d.times_seen} vez/veces</span>
+            <div class="card-badges">
+              <span class="badge-verdict ${verdictLower}">${verdict}</span>
             </div>
           </div>
+
+          <!-- Horizontal Interior: Left Channels, Right Details -->
+          <div class="card-body-row">
+            <div class="channels-column">
+              <div class="channel-box data">
+                <div class="channel-header">
+                  <span>${t('dataChannel')}</span>
+                  <span>802.1Q</span>
+                </div>
+                <div class="channel-vlan">${dataVlanText}</div>
+                <div class="channel-meta">${d.switch_ip ? 'IP: ' + escapeHtml(d.switch_ip) : (currentLang === 'es' ? 'Sin IP' : 'No IP')}</div>
+              </div>
+
+              <div class="channel-box voice">
+                <div class="channel-header">
+                  <span>${t('voiceChannel')}</span>
+                  <span>${d.voice_vlan_source || 'LLDP-MED'}</span>
+                </div>
+                <div class="channel-vlan">${voiceVlanText}</div>
+                <div class="channel-meta">${d.voice_vlan ? `${voiceTaggedStr} • CoS ${d.voice_cos || 5}` : (currentLang === 'es' ? 'Sin VoIP' : 'No VoIP')}</div>
+              </div>
+            </div>
+
+            <div class="details-column">
+              <div class="detail-row">
+                <span class="label">${t('switchPort')}</span>
+                <span class="value" onclick="copyText('${escapeHtml(d.port)}')">${escapeHtml(d.port || '-')} <svg class="copy-icon" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></span>
+              </div>
+              <div class="detail-row">
+                <span class="label">${t('mgmtIP')}</span>
+                <span class="value" onclick="copyText('${escapeHtml(d.switch_ip)}')">${escapeHtml(d.switch_ip || 'N/A')} <svg class="copy-icon" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></span>
+              </div>
+              <div class="detail-row">
+                <span class="label">${t('chassisMAC')}</span>
+                <span class="value" onclick="copyText('${escapeHtml(d.chassis_id)}')">${escapeHtml(d.chassis_id || '-')}</span>
+              </div>
+              <div class="detail-row">
+                <span class="label">${t('localAdapter')}</span>
+                <span class="value">${escapeHtml(d.local_adapter || '-')} <span style="color:#CBB4E8; margin-left:3px;">${d.times_seen}x</span></span>
+              </div>
+            </div>
+          </div>
+
           <div class="card-footer">
-            <span>Hora: ${new Date(d.last_seen).toLocaleTimeString()}</span>
-            <span>${d.port_description ? escapeHtml(d.port_description) : 'Sin descripción de puerto'}</span>
+            <span><svg class="v-icon" style="width:10px; height:10px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> ${new Date(d.last_seen).toLocaleTimeString()}</span>
+            <span>${d.verdict_reason ? escapeHtml(d.verdict_reason) : ''}</span>
           </div>
         `;
         container.appendChild(card);
       });
+    }
 
-      // Update Topology Flow
-      if (devices.length > 0) {
-        const first = devices[0];
-        topoFlow.innerHTML = `
-          <div class="topo-node">
-            <span style="font-size: 11px; color: var(--muted); font-weight: 700;">MI COMPUTADOR</span>
-            <strong style="color: #fff; font-size: 14px;">${escapeHtml(first.local_adapter)}</strong>
-            <span style="font-size: 11px; color: var(--cyan); font-family: monospace;">${escapeHtml(first.local_mac)}</span>
-          </div>
-          <div class="topo-arrow">➔</div>
-          <div class="topo-node" style="border-color: var(--warning);">
-            <span style="font-size: 11px; color: var(--warning); font-weight: 700;">ROSETA / VLAN</span>
-            <strong style="color: #fff; font-size: 14px;">${first.vlan ? 'VLAN ' + first.vlan : 'Trunk / Native'}</strong>
-            <span style="font-size: 11px; color: var(--muted);">Punto de Red</span>
-          </div>
-          <div class="topo-arrow">➔</div>
-          <div class="topo-node" style="border-color: var(--cyan);">
-            <span style="font-size: 11px; color: var(--cyan); font-weight: 700;">SWITCH CONECTADO</span>
-            <strong style="color: #fff; font-size: 14px;">${escapeHtml(first.switch_name || 'Switch')}</strong>
-            <span style="font-size: 12px; color: var(--success); font-family: monospace;">Puerto: ${escapeHtml(first.port)}</span>
-            <span style="font-size: 11px; color: var(--muted);">${escapeHtml(first.model || '')}</span>
-          </div>
-        `;
+    // --- Interactive Topology Graph Canvas ---
+    const tCanvas = document.getElementById('topoCanvas');
+    const tCtx = tCanvas.getContext('2d');
+
+    function resizeTopoCanvas() {
+      tCanvas.width = tCanvas.offsetWidth;
+      tCanvas.height = tCanvas.offsetHeight;
+    }
+    window.addEventListener('resize', () => {
+      resizeTopoCanvas();
+      drawTopologyGraph();
+    });
+
+    function drawTopologyGraph() {
+      resizeTopoCanvas();
+      tCtx.clearRect(0, 0, tCanvas.width, tCanvas.height);
+
+      const devices = currentInventory.devices || [];
+      if (devices.length === 0) {
+        tCtx.fillStyle = '#6B7280';
+        tCtx.font = '13px sans-serif';
+        tCtx.textAlign = 'center';
+        tCtx.fillText(t('emptyState').replace('<br>', ' '), tCanvas.width / 2, tCanvas.height / 2);
+        return;
       }
+
+      // Group devices by Switch Name
+      const switchMap = {};
+      devices.forEach(d => {
+        const sw = d.switch_name || 'Switch Core';
+        if (!switchMap[sw]) switchMap[sw] = [];
+        switchMap[sw].push(d);
+      });
+
+      const switches = Object.keys(switchMap);
+      const centerX = tCanvas.width / 2;
+      const centerY = tCanvas.height / 2;
+
+      switches.forEach((swName, swIdx) => {
+        const swX = switches.length === 1 ? centerX : (tCanvas.width / (switches.length + 1)) * (swIdx + 1);
+        const swY = centerY - 60;
+        const ports = switchMap[swName];
+
+        // Draw Switch Node (Central Hub)
+        tCtx.fillStyle = '#8666b0';
+        tCtx.shadowColor = 'rgba(134, 102, 176, 0.45)';
+        tCtx.shadowBlur = 16;
+        tCtx.beginPath();
+        tCtx.roundRect(swX - 90, swY - 26, 180, 52, 12);
+        tCtx.fill();
+        tCtx.shadowBlur = 0;
+
+        tCtx.fillStyle = '#FFFFFF';
+        tCtx.font = 'bold 13px sans-serif';
+        tCtx.textAlign = 'center';
+        tCtx.fillText(swName, swX, swY);
+
+        tCtx.fillStyle = '#E8DEF8';
+        tCtx.font = '10px monospace';
+        tCtx.fillText(`[${ports.length} Port(s)]`, swX, swY + 14);
+
+        // Draw Branching Port Nodes
+        ports.forEach((p, pIdx) => {
+          const angleStep = Math.PI / (ports.length + 1);
+          const angle = angleStep * (pIdx + 1);
+          const portX = swX + (pIdx - (ports.length - 1) / 2) * 160;
+          const portY = swY + 150;
+
+          // Connecting line
+          tCtx.strokeStyle = 'rgba(134, 102, 176, 0.35)';
+          tCtx.lineWidth = 2;
+          tCtx.beginPath();
+          tCtx.moveTo(swX, swY + 26);
+          tCtx.bezierCurveTo(swX, swY + 80, portX, portY - 60, portX, portY - 24);
+          tCtx.stroke();
+
+          // Port Box Node
+          tCtx.fillStyle = '#181E2C';
+          tCtx.strokeStyle = p.voice_vlan ? '#A385CE' : '#6393E8';
+          tCtx.lineWidth = 1.5;
+          tCtx.beginPath();
+          tCtx.roundRect(portX - 70, portY - 24, 140, 48, 8);
+          tCtx.fill();
+          tCtx.stroke();
+
+          tCtx.fillStyle = '#F3F4F6';
+          tCtx.font = 'bold 11px monospace';
+          tCtx.fillText(p.port || 'Port', portX, portY - 6);
+
+          tCtx.fillStyle = '#9CA3AF';
+          tCtx.font = '10px sans-serif';
+          const vlanInfo = `D: ${p.vlan || '-'}` + (p.voice_vlan ? ` | V: ${p.voice_vlan}` : '');
+          tCtx.fillText(vlanInfo, portX, portY + 12);
+        });
+      });
+    }
+
+    // --- Scanning Engine ---
+    async function stopScan() {
+      if (!isScanning) return;
+      try {
+        await fetch('/api/stop', { method: 'POST' });
+        showToast(currentLang === 'es' ? "Escaneo detenido" : "Scan stopped", 'info');
+      } catch (e) {}
+      finishScanUI();
+    }
+
+    function finishScanUI() {
+      clearInterval(timerInterval);
+      isScanning = false;
+      document.getElementById('startBtn').disabled = false;
+      document.getElementById('btnText').textContent = t('btnStart');
+      document.getElementById('btnIconSvg')?.classList.remove('spinning');
+      document.getElementById('stopBtn').style.display = 'none';
+      document.getElementById('progressContainer').style.display = 'none';
     }
 
     async function toggleScan() {
-      if (isScanning) return;
+      if (isScanning) {
+        stopScan();
+        return;
+      }
 
       const adapter = document.getElementById('adapterSelect').value;
       if (!adapter) {
-        showToast('Seleccione o conecte una interfaz de red válida primero.', '⚠️');
+        showToast(currentLang === 'es' ? 'Seleccione un adaptador de red físico primero.' : 'Select a physical adapter first.', 'warn');
         return;
       }
       const duration = parseInt(document.getElementById('durationInput').value) || 62;
       const append = document.getElementById('appendToggle').checked;
-      const remote = document.getElementById('remoteUrlInput').value;
+      const tag = document.getElementById('tagInput').value;
 
       isScanning = true;
       document.getElementById('startBtn').disabled = true;
-      document.getElementById('btnText').textContent = 'Escuchando tramas en el cable...';
-      document.getElementById('appStatusText').textContent = 'Escaneando';
-      document.getElementById('appStatus').classList.add('scanning');
+      document.getElementById('btnText').textContent = t('btnScanning');
+      document.getElementById('btnIconSvg')?.classList.add('spinning');
+      document.getElementById('stopBtn').style.display = 'inline-flex';
       document.getElementById('progressContainer').style.display = 'flex';
 
       let elapsed = 0;
       const fill = document.getElementById('progressBarFill');
       const timer = document.getElementById('progressTimer');
+      const micro = document.getElementById('microStateText');
       fill.style.width = '0%';
 
       timerInterval = setInterval(() => {
@@ -1160,6 +1807,13 @@
         const pct = Math.min(100, Math.round((elapsed / duration) * 100));
         fill.style.width = pct + '%';
         timer.textContent = `${elapsed}s / ${duration}s`;
+
+        if (elapsed < 12) micro.textContent = t('micro1');
+        else if (elapsed < 28) micro.textContent = t('micro2');
+        else if (elapsed < 45) micro.textContent = t('micro3');
+        else if (elapsed < 56) micro.textContent = t('micro4');
+        else micro.textContent = t('micro5');
+
         if (elapsed >= duration) clearInterval(timerInterval);
       }, 1000);
 
@@ -1167,34 +1821,29 @@
         const res = await fetch('/api/scan', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            adapter,
-            duration,
-            append,
-            remote
-          })
+          body: JSON.stringify({ adapter, duration, append, tag })
         });
         const data = await res.json();
         if (data.error) {
-          showToast(data.error, '⚠️');
+          if (data.error.includes("detenido por el usuario")) {
+            showToast(currentLang === 'es' ? "Escaneo detenido" : "Scan stopped", 'info');
+          } else {
+            showToast(data.error, 'warn');
+          }
         } else {
           currentInventory = data;
           renderDevices();
-          showToast(`¡Escaneo finalizado! ${data.devices ? data.devices.length : 0} switches`, '⚡');
+          drawTopologyGraph();
+          showToast(currentLang === 'es' ? `Escaneo completado: ${data.devices ? data.devices.length : 0} switches` : `Scan completed: ${data.devices ? data.devices.length : 0} switches`, 'success');
         }
       } catch (err) {
-        showToast("Error de comunicación: " + err.message, '❌');
+        showToast("Error: " + err.message, 'error');
       } finally {
-        clearInterval(timerInterval);
-        isScanning = false;
-        document.getElementById('startBtn').disabled = false;
-        document.getElementById('btnText').textContent = 'Iniciar Reconocimiento de Punto de Red';
-        document.getElementById('appStatusText').textContent = 'Listo';
-        document.getElementById('appStatus').classList.remove('scanning');
-        document.getElementById('progressContainer').style.display = 'none';
+        finishScanUI();
       }
     }
 
+    // --- Tab Switcher ---
     function setTab(tab) {
       document.getElementById('tabCards').classList.toggle('active', tab === 'cards');
       document.getElementById('tabTopology').classList.toggle('active', tab === 'topology');
@@ -1203,58 +1852,105 @@
       document.getElementById('cardsView').style.display = tab === 'cards' ? 'grid' : 'none';
       document.getElementById('topologyView').style.display = tab === 'topology' ? 'block' : 'none';
       document.getElementById('textView').style.display = tab === 'text' ? 'block' : 'none';
+
+      if (tab === 'topology') {
+        setTimeout(drawTopologyGraph, 50);
+      }
     }
 
     async function clearResults() {
-      if (confirm("¿Desea limpiar el inventario acumulado actual?")) {
+      const confirmMsg = currentLang === 'es' ? "¿Desea limpiar el inventario acumulado actual?" : "Clear current cumulative inventory?";
+      if (confirm(confirmMsg)) {
         await fetch('/api/clear', { method: 'POST' });
         loadInventory();
-        showToast("Inventario reiniciado", '🗑️');
+        showToast(currentLang === 'es' ? "Inventario reiniciado" : "Inventory cleared", 'info');
       }
     }
+
+    // --- Settings & Themes ---
+    function openSettings() {
+      document.getElementById('settingsModal').classList.add('open');
+    }
+
+    function closeSettings(e) {
+      if (!e || e.target === document.getElementById('settingsModal') || e.target.tagName === 'BUTTON') {
+        document.getElementById('settingsModal').classList.remove('open');
+      }
+    }
+
+    function changeTheme(theme) {
+      document.body.className = '';
+      if (theme === 'high-contrast') document.body.classList.add('theme-high-contrast');
+      else if (theme === 'clean-slate') document.body.classList.add('theme-clean-slate');
+      localStorage.setItem('sre_theme', theme);
+    }
+
+    // --- Keyboard Shortcuts ---
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        toggleScan();
+      } else if (e.ctrlKey && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        openSettings();
+      } else if (e.ctrlKey && e.key.toLowerCase() === 'e') {
+        e.preventDefault();
+        toggleDownloadMenu();
+      } else if (e.ctrlKey && e.key.toLowerCase() === 't') {
+        e.preventDefault();
+        const active = document.getElementById('tabCards').classList.contains('active');
+        setTab(active ? 'topology' : 'cards');
+      }
+    });
 
     function escapeHtml(str) {
       return String(str || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
     }
 
+    // --- Auto Extraction & Hot-Plug Monitor ---
     let lastCarrierUp = null;
-    let autoMonitorInterval = null;
+    setInterval(async () => {
+      const autoEnabled = document.getElementById('autoToggle')?.checked;
+      const sel = document.getElementById('adapterSelect');
+      const adapter = sel ? sel.value : '';
+      if (!adapter) return;
 
-    function startAutoMonitor() {
-      if (autoMonitorInterval) clearInterval(autoMonitorInterval);
-      autoMonitorInterval = setInterval(async () => {
-        const autoEnabled = document.getElementById('autoToggle')?.checked;
-        if (!autoEnabled || isScanning) return;
+      try {
+        const res = await fetch(`/api/validate?adapter=${encodeURIComponent(adapter)}`);
+        if (!res.ok) return;
+        const v = await res.json();
 
-        const sel = document.getElementById('adapterSelect');
-        const adapter = sel ? sel.value : '';
-        if (!adapter) return;
-
-        try {
-          const res = await fetch(`/api/validate?adapter=${encodeURIComponent(adapter)}`);
-          if (!res.ok) return;
-          const v = await res.json();
-
-          if (lastCarrierUp === false && v.is_up === true) {
-            showToast("🔌 Cable conectado. Ejecutando Auto-Extracción de datos...", "⚡");
-            validateSelected();
-            setTimeout(() => {
-              if (!isScanning) toggleScan();
-            }, 1000);
-          } else if (lastCarrierUp === true && v.is_up === false) {
-            showToast("🔌 Cable desconectado. Esperando siguiente puerto...", "ℹ️");
-            validateSelected();
-          }
-          lastCarrierUp = v.is_up;
-        } catch (e) {
-          // ignore background polling error
+        if (lastCarrierUp === false && v.is_up === true && autoEnabled && !isScanning) {
+          showToast(currentLang === 'es' ? "Enlace detectado. Iniciando auto-extracción..." : "Link detected. Starting auto-extraction...", "success");
+          validateSelected();
+          setTimeout(() => { if (!isScanning) toggleScan(); }, 1200);
+        } else if (lastCarrierUp === true && v.is_up === false) {
+          showToast(currentLang === 'es' ? "Enlace desconectado. Esperando punto de red..." : "Link disconnected. Waiting for port...", "info");
+          validateSelected();
         }
-      }, 3000);
-    }
+        lastCarrierUp = v.is_up;
+      } catch (e) {}
+    }, 2500);
 
+    // Periodic detection of hot-plugged USB-C Ethernet adapters (every 6 seconds)
+    setInterval(() => {
+      if (!isScanning) {
+        loadAdapters(true);
+      }
+    }, 6000);
+
+    // Initial setup
+    const savedTheme = localStorage.getItem('sre_theme');
+    if (savedTheme) {
+      document.getElementById('themeSelect').value = savedTheme;
+      changeTheme(savedTheme);
+    }
+    applyTranslations();
+    setTab('cards');
     loadAdapters();
     loadInventory();
-    startAutoMonitor();
   </script>
 </body>
 </html>
